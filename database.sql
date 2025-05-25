@@ -19,7 +19,17 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Create products table with all specifications
+-- Create categories table
+CREATE TABLE IF NOT EXISTS categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    icon VARCHAR(50) DEFAULT 'fas fa-folder',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create products table with all specifications and category relation
 CREATE TABLE IF NOT EXISTS products (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -27,14 +37,17 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(10, 2) NOT NULL,
     stock INT NOT NULL DEFAULT 0,
     category VARCHAR(100) NOT NULL,
+    category_id INT,
     image_url VARCHAR(255),
     ram VARCHAR(50) NULL,
     storage VARCHAR(50) NULL,
     processor VARCHAR(50) NULL,
     camera VARCHAR(50) NULL,
     battery VARCHAR(50) NULL,
+    discount INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
 -- Create orders table
@@ -58,6 +71,28 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE SET NULL
 );
 
+-- Create wishlist table
+CREATE TABLE IF NOT EXISTS wishlist (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    product_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+-- Create product ratings table
+CREATE TABLE IF NOT EXISTS product_ratings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT,
+    user_id INT,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Create cart table
 CREATE TABLE IF NOT EXISTS cart (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -68,6 +103,15 @@ CREATE TABLE IF NOT EXISTS cart (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
 );
+
+-- Insert default categories
+INSERT INTO categories (name, slug, icon) VALUES
+    ('Ordinateurs Portables', 'laptops', 'fas fa-laptop'),
+    ('PC Bureau', 'desktops', 'fas fa-desktop'),
+    ('Smartphones', 'smartphones', 'fas fa-mobile-alt'),
+    ('Accessoires', 'accessories', 'fas fa-keyboard'),
+    ('Gaming', 'gaming', 'fas fa-gamepad'),
+    ('Composants', 'components', 'fas fa-microchip');
 
 -- Insert sample PC products
 INSERT INTO
@@ -87,7 +131,8 @@ VALUES (
         '14-inch Liquid Retina XDR display, Professional Grade Laptop',
         25999.00,
         10,
-        'pc',
+        'laptop',
+        (SELECT id FROM categories WHERE slug = 'laptops'),
         'img/best-laptops-20240516-medium.jpg',
         '16GB',
         '512GB',
