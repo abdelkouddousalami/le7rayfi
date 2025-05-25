@@ -244,21 +244,21 @@ if (isset($_SESSION['user_id'])) {
 
                 <div class="product-actions">
                     <div class="action-buttons">
-                        <?php if ($product['stock'] > 0): ?>
+                        
                             <button class="product-button add-to-cart" onclick="addToCart(<?php echo $product['id']; ?>)">
                                 <i class="fas fa-shopping-cart"></i> Ajouter au panier
                             </button>
                             <button class="product-button add-to-wishlist" onclick="addToWishlist(<?php echo $product['id']; ?>)">
                                 <i class="fas fa-heart"></i>
                             </button>
-                        <?php else: ?>
+                        
                             <button class="product-button out-of-stock" disabled>
                                 <i class="fas fa-times"></i> Rupture de stock
                             </button>
                             <button class="product-button notify-stock">
                                 <i class="fas fa-bell"></i> Notifier disponibilité
                             </button>
-                        <?php endif; ?>
+                        
                     </div>
                     <a href="product_details.php?id=<?php echo $product['id']; ?>" class="product-button view-details">
                         <i class="fas fa-eye"></i> Voir détails
