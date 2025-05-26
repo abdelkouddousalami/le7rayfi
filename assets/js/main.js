@@ -167,14 +167,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayProducts(products) {
         elements.productsGrid.innerHTML = products.map(product => {
             let specsList = '';
-            if (product.category === 'pc' || product.category === 'laptop') {
+            if (product.category_slug === 'laptops' || product.category_slug === 'desktops') {
                 specsList = `
                     <div class="product-specs">
                         ${product.ram ? `<span><i class="fas fa-memory"></i> ${product.ram}</span>` : ''}
                         ${product.storage ? `<span><i class="fas fa-hdd"></i> ${product.storage}</span>` : ''}
                         ${product.processor ? `<span><i class="fas fa-microchip"></i> ${product.processor}</span>` : ''}
                     </div>`;
-            } else if (product.category === 'mobile' || product.category === 'smartphone') {
+            } else if (product.category_slug === 'smartphones' || product.category_slug === 'tablets') {
                 specsList = `
                     <div class="product-specs">
                         ${product.storage ? `<span><i class="fas fa-hdd"></i> ${product.storage}</span>` : ''}
@@ -184,13 +184,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             return `
-                <div class="product-card">
+                <div class="product-card" data-category="${product.category_slug}">
                     <div class="product-image-container">
                         <img src="${product.image_url}" alt="${product.name}" class="product-image">
                         ${product.stock < 5 ? '<span class="stock-badge">Stock limité</span>' : ''}
                     </div>
                     <div class="product-info">
-                        <span class="product-category">${getCategoryLabel(product.category)}</span>
+                        <span class="product-category">${product.category_name}</span>
                         <h3 class="product-title">${product.name}</h3>
                         <p class="product-description">${product.description}</p>
                         ${specsList}
@@ -399,6 +399,28 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
+
+    // Filter buttons functionality
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            button.classList.add('active');
+
+            const category = button.dataset.category;
+            // Show all products if "all" is selected
+            const productCards = document.querySelectorAll('.product-card');
+            productCards.forEach(card => {
+                if (category === 'all') {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = card.dataset.category === category ? 'block' : 'none';
+                }
+            });
+        });
+    });
 
     // Initial load
     updateProducts();

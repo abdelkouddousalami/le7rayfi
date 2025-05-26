@@ -1,24 +1,42 @@
 <?php
 session_start();
 require_once 'config/db.php';
+
+if (isset($_SESSION['user_id'])) {
+    // If user is already logged in, redirect them
+    header("Location: " . ($_SESSION['role'] === 'admin' ? 'admin/dashboard.php' : 'index.php'));
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-    $stmt->execute([$username, $username]);
-    $user = $stmt->fetch();
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
-        if ($user['role'] === 'admin') {
-            header("Location: admin/dashboard.php");
+    try {
+        $conn = getConnection();
+        
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
+        
+        if (empty($username) || empty($password)) {
+            $error = "Veuillez remplir tous les champs requis";
         } else {
-            header("Location: index.php");
+            $stmt = $conn->prepare("SELECT * FROM users WHERE (username = ? OR email = ?) AND status = TRUE");
+            $stmt->execute([$username, $username]);
+            $user = $stmt->fetch();
+            
+            if ($user && password_verify($password, $user['password'])) {
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['full_name'] = $user['full_name'];
+                
+                header("Location: " . ($user['role'] === 'admin' ? 'admin/dashboard.php' : 'index.php'));
+                exit();
+            } else {
+                $error = "Nom d'utilisateur/email ou mot de passe invalide";
+            }
         }
-        exit();
-    } else {
-        $error = "Invalid username/email or password";
+    } catch (Exception $e) {
+        error_log("Login error: " . $e->getMessage());
+        $error = "Une erreur est survenue. Veuillez réessayer plus tard.";
     }
 }
 ?>
@@ -28,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - HA GROUP</title>
-    <link rel="stylesheet" href="https:
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="index.css">
     <style>
         .login-container {
@@ -105,6 +123,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             margin-bottom: 20px;
             text-align: center;
         }
+        .success-message {
+            background: #2ecc71;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
         .back-to-home {
             text-align: center;
             margin-top: 20px;
@@ -126,16 +152,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
         <?php if (isset($error)): ?>
             <div class="error-message">
-                <?php echo $error; ?>
+                <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
+        
+        <?php if (isset($_SESSION['registration_success'])): ?>
+            <div class="success-message">
+                Inscription réussie! Vous pouvez maintenant vous connecter.
+            </div>
+            <?php unset($_SESSION['registration_success']); ?>
+        <?php endif; ?>
+        
         <form class="login-form" method="POST" action="">
             <div class="form-group">
-                <label for="username">Nom d'utilisateur ou Email</label>
-                <input type="text" id="username" name="username" required>
+                <label for="username">Nom d'utilisateur ou Email *</label>
+                <input type="text" id="username" name="username" required 
+                       value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
             </div>
             <div class="form-group">
-                <label for="password">Mot de passe</label>
+                <label for="password">Mot de passe *</label>
                 <input type="password" id="password" name="password" required>
             </div>
             <button type="submit" class="login-btn">
@@ -149,5 +184,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <a href="index.php"><i class="fas fa-arrow-left"></i> Retour à l'accueil</a>
         </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Clear the form fields if the user just registered successfully
+        if (document.querySelector('.success-message')) {
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+    });
+    </script>
 </body>
 </html>

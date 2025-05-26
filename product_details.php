@@ -5,6 +5,9 @@ require_once 'config/db.php';
 // Get product ID from URL
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
+// Get database connection
+$conn = getConnection();
+
 // Fetch product details
 $stmt = $conn->prepare("
     SELECT p.*, c.name as category_name, c.slug as category_slug 

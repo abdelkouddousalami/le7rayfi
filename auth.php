@@ -3,70 +3,120 @@ session_start();
 require_once 'config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'login') {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
+    try {
+        $conn = getConnection();
         
-        $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-        $stmt->execute([$username, $username]);
-        $user = $stmt->fetch();
-        
-        if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
+        if (isset($_POST['action']) && $_POST['action'] === 'login') {
+            $username = trim($_POST['username']);
+            $password = $_POST['password'];
             
-            echo json_encode(['success' => true, 'redirect' => $user['role'] === 'admin' ? 'admin/dashboard.php' : 'index.php']);
-            exit();
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid username/email or password']);
-            exit();
-        }
-    } elseif (isset($_POST['action']) && $_POST['action'] === 'register') {
-        $username = $_POST['username'];
-        $email = $_POST['email'];
-        $password = $_POST['password'];
-        $confirm_password = $_POST['confirm_password'];
-        $full_name = $_POST['full_name'];
-        $phone = $_POST['phone'];
-        $address = $_POST['address'];
-        
-        $errors = [];
-        
-        // Validate username
-        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
-        $stmt->execute([$username]);
-        if ($stmt->rowCount() > 0) {
-            $errors[] = "Username already taken";
-        }
-        
-        // Validate email
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        if ($stmt->rowCount() > 0) {
-            $errors[] = "Email already in use";
-        }
-        
-        // Validate password
-        if ($password !== $confirm_password) {
-            $errors[] = "Passwords do not match";
-        }
-        
-        if (empty($errors)) {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            
-            $stmt = $conn->prepare("INSERT INTO users (username, email, password, full_name, phone, address, role) VALUES (?, ?, ?, ?, ?, ?, 'user')");
-            if ($stmt->execute([$username, $email, $hashed_password, $full_name, $phone, $address])) {
-                echo json_encode(['success' => true, 'message' => 'Registration successful! Please login.']);
-                exit();
-            } else {
-                echo json_encode(['success' => false, 'message' => 'An error occurred during registration']);
+            if (empty($username) || empty($password)) {
+                echo json_encode(['success' => false, 'message' => 'Please fill in all required fields']);
                 exit();
             }
-        } else {
-            echo json_encode(['success' => false, 'message' => implode(', ', $errors)]);
-            exit();
+            
+            $stmt = $conn->prepare("SELECT * FROM users WHERE (username = ? OR email = ?) AND status = TRUE");
+            $stmt->execute([$username, $username]);
+            $user = $stmt->fetch();
+            
+            if ($user && password_verify($password, $user['password'])) {
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['full_name'] = $user['full_name'];
+                
+                echo json_encode(['success' => true, 'redirect' => $user['role'] === 'admin' ? 'admin/dashboard.php' : 'index.php']);
+                exit();
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Invalid username/email or password']);
+                exit();
+            }
+        } elseif (isset($_POST['action']) && $_POST['action'] === 'register') {
+            $username = trim($_POST['username'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $password = $_POST['password'] ?? '';
+            $confirm_password = $_POST['confirm_password'] ?? '';
+            $full_name = trim($_POST['full_name'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $address = trim($_POST['address'] ?? '');
+            
+            $errors = [];
+            
+            // Validate required fields
+            if (empty($username)) $errors[] = "Username is required";
+            if (empty($email)) $errors[] = "Email is required";
+            if (empty($password)) $errors[] = "Password is required";
+            if (empty($full_name)) $errors[] = "Full name is required";
+            
+            // Validate username format
+            if (!preg_match('/^[a-zA-Z0-9_]{3,50}$/', $username)) {
+                $errors[] = "Username must be between 3-50 characters and can only contain letters, numbers, and underscores";
+            }
+            
+            // Validate email format
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "Invalid email format";
+            }
+            
+            // Check existing username
+            $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt->execute([$username]);
+            if ($stmt->rowCount() > 0) {
+                $errors[] = "Username already taken";
+            }
+            
+            // Check existing email
+            $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->rowCount() > 0) {
+                $errors[] = "Email already in use";
+            }
+            
+            // Validate password
+            if (strlen($password) < 8) {
+                $errors[] = "Password must be at least 8 characters long";
+            }
+            if ($password !== $confirm_password) {                $errors[] = "Passwords do not match";
+            }
+            
+            if (empty($errors)) {
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                
+                try {
+                    $stmt = $conn->prepare("
+                        INSERT INTO users (username, email, password, full_name, phone, address, role, status) 
+                        VALUES (?, ?, ?, ?, ?, ?, 'user', TRUE)
+                    ");
+                    if ($stmt->execute([$username, $email, $hashed_password, $full_name, $phone, $address])) {
+                        echo json_encode([
+                            'success' => true, 
+                            'message' => 'Registration successful! Please login.',
+                            'redirect' => 'login.php'
+                        ]);
+                        exit();
+                    } else {
+                        throw new Exception("Database insert failed");
+                    }
+                } catch (Exception $e) {
+                    error_log("Registration error: " . $e->getMessage());
+                    echo json_encode([
+                        'success' => false, 
+                        'message' => 'An error occurred during registration. Please try again.'
+                    ]);
+                    exit();
+                }
+            } else {
+                echo json_encode(['success' => false, 'message' => implode(', ', $errors)]);
+                exit();
+            }
         }
+    } catch (Exception $e) {
+        error_log("Auth error: " . $e->getMessage());
+        echo json_encode([
+            'success' => false, 
+            'message' => 'An error occurred. Please try again later.'
+        ]);
+        exit();
     }
 }
 ?>
@@ -79,37 +129,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="index.css">
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
         .nav-container {
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             z-index: 1000;
-            padding: 1rem 2rem;
         }
 
-        .nav-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #3498db;
+        .nav-brand {
+            font-size: 1.5rem;
+            color: #2c3e50;
             text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo i {
-            font-size: 1.2em;
+            font-weight: bold;
         }
 
         .nav-links {
@@ -120,118 +168,88 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .nav-link {
             color: #2c3e50;
             text-decoration: none;
-            position: relative;
-            padding: 5px 0;
+            font-weight: 500;
             transition: color 0.3s;
-        }
-
-        .nav-link:after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: #3498db;
-            transition: width 0.3s;
         }
 
         .nav-link:hover {
             color: #3498db;
         }
 
-        .nav-link:hover:after {
-            width: 100%;
-        }
-
         .auth-wrapper {
-            min-height: 100vh;
+            height: 100vh;
+            padding-top: 60px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            background: linear-gradient(120deg, #2980b9, #8e44ad);
-            padding: 80px 20px 20px;
+            align-items: center;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
         }
 
         .auth-container {
-            width: 70%;
+            width: 90%;
             max-width: 1000px;
-            display: flex;
+            height: 600px;
             background: white;
             border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
-            position: relative;
-            transform-origin: center;
-            animation: container-appear 0.6s ease-out;
-        }
-
-        @keyframes container-appear {
-            0% {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .side-content {
-            flex: 1;
-            padding: 40px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-            color: white;
-            background: linear-gradient(135deg, #3498db, #2c3e50);
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
             position: relative;
-            z-index: 1;
         }
 
         .form-container {
-            flex: 1;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            width: 60%;
+            padding: 2rem 4rem;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            background: white;
+            overflow-y: auto;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .form-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .form-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .form-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
         }
 
         .auth-container.register-mode .side-content {
-            transform: translateX(100%);
+            transform: translateX(-150%);
         }
 
         .auth-container.register-mode .form-container {
-            transform: translateX(-100%);
+            transform: translateX(66.666%);
         }
 
         .form-title {
             font-size: 2em;
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
             color: #2c3e50;
             text-align: center;
             opacity: 0;
-            animation: fade-in 0.6s ease-out forwards 0.3s;
+            animation: fadeInDown 0.6s forwards;
         }
 
-        @keyframes fade-in {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-sizing: border-box;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 1.5rem;
             opacity: 0;
-            animation: slide-up 0.5s ease-out forwards;
+            animation: fadeInUp 0.6s forwards;
+            box-sizing: border-box;
         }
 
         .form-group:nth-child(1) { animation-delay: 0.1s; }
@@ -239,7 +257,189 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .form-group:nth-child(3) { animation-delay: 0.3s; }
         .form-group:nth-child(4) { animation-delay: 0.4s; }
 
-        @keyframes slide-up {
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: #f8f9fa;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+            background: #fff;
+        }
+
+        /* Specific form layouts */
+        .login-form {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            box-sizing: border-box;
+        }
+
+        .register-form {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .register-form .form-row {
+            margin-bottom: 1rem;
+        }
+
+        /* Error and success messages */
+        .error-message, .success-message {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .error-message {
+            background: #fff3f3;
+            color: #e74c3c;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .success-message {
+            background: #f0fff4;
+            color: #2ecc71;
+            border-left: 4px solid #2ecc71;
+        }
+
+        /* Submit button styling */
+        .submit-btn {
+            background: #3498db;
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            width: 100%;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            box-sizing: border-box;
+            opacity: 0;
+            animation: fadeInUp 0.6s 0.5s forwards;
+        }
+
+        .submit-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        /* Side content and switch button */
+        .side-content {
+            width: 40%;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            text-align: center;
+            position: absolute;
+            right: 0;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-sizing: border-box;
+        }
+
+        .switch-form-btn {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            padding: 14px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0;
+            animation: fadeInUp 0.6s 0.4s forwards;
+            box-sizing: border-box;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .auth-container {
+                width: 95%;
+                height: auto;
+                min-height: 600px;
+                margin: 1rem auto;
+                flex-direction: column-reverse;
+            }
+
+            .side-content {
+                position: static;
+                width: 100%;
+                padding: 2rem;
+                min-height: 200px;
+            }
+
+            .form-container {
+                width: 100%;
+                padding: 2rem;
+                height: auto;
+                max-height: calc(100vh - 280px);
+                overflow-y: auto;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .login-form {
+                padding: 0;
+            }
+
+            .auth-container.register-mode .side-content,
+            .auth-container.register-mode .form-container {
+                transform: none;
+            }
+
+            .auth-wrapper {
+                padding: 80px 1rem 20px;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .form-group {
+                margin-bottom: 1rem;
+            }
+
+            .submit-btn {
+                margin-top: 0.5rem;
+            }
+        }
+
+        @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(20px);
@@ -250,102 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #2c3e50;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: all 0.3s;
-            background: white;
-        }
-
-        .form-group input:focus {
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-            outline: none;
-        }
-
-        .submit-btn {
-            background: #3498db;
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            width: 100%;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.3s;
-            opacity: 0;
-            animation: fade-in 0.5s ease-out forwards 0.5s;
-        }
-
-        .submit-btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
-        }
-
-        .switch-form-btn {
-            background: transparent;
-            border: 2px solid white;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: all 0.3s;
-            opacity: 0;
-            animation: fade-in 0.5s ease-out forwards 0.6s;
-        }
-
-        .switch-form-btn:hover {
-            background: white;
-            color: #3498db;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
-        }
-
-        .side-content h2 {
-            font-size: 2.5em;
-            margin-bottom: 20px;
-            opacity: 0;
-            animation: fade-in 0.5s ease-out forwards;
-        }
-
-        .side-content p {
-            margin-bottom: 30px;
-            font-size: 1.1em;
-            opacity: 0;
-            animation: fade-in 0.5s ease-out forwards 0.2s;
-        }
-
-        .error-message, .success-message {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-            animation: slide-down 0.3s ease-out;
-        }
-
-        .error-message {
-            background: #ff6b6b;
-            color: white;
-        }
-
-        .success-message {
-            background: #51cf66;
-            color: white;
-        }
-
-        @keyframes slide-down {
+        @keyframes fadeInDown {
             from {
                 opacity: 0;
                 transform: translateY(-20px);
@@ -355,40 +460,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 transform: translateY(0);
             }
         }
-
-        @media (max-width: 768px) {
-            .auth-container {
-                width: 90%;
-                flex-direction: column;
-            }
-
-            .side-content, .form-container {
-                width: 100%;
-            }
-
-            .auth-container.register-mode .side-content {
-                transform: translateY(100%);
-            }
-
-            .auth-container.register-mode .form-container {
-                transform: translateY(-100%);
-            }
-        }
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
     <nav class="nav-container">
-        <div class="nav-content">
-            <a href="index.php" class="logo">
-                <i class="fas fa-laptop"></i>
-                HA GROUP
-            </a>
-            <div class="nav-links">
-                <a href="index.php" class="nav-link">Accueil</a>
-                <a href="#" class="nav-link">Produits</a>
-                <a href="#" class="nav-link">Contact</a>
-            </div>
+        <a href="index.php" class="nav-brand">
+            HA GROUP
+        </a>
+        <div class="nav-links">
+            <a href="index.php" class="nav-link">Accueil</a>
+            <a href="#" class="nav-link">Produits</a>
+            <a href="#" class="nav-link">Contact</a>
         </div>
     </nav>
 
@@ -396,77 +478,89 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="auth-container">
             <div class="side-content">
                 <div class="login-side">
-                    <h2>Welcome Back!</h2>
-                    <p>To keep connected with us please login with your personal information</p>
+                    <h2>Bienvenue!</h2>
+                    <p>Pour rester connecté avec nous, veuillez vous connecter avec vos informations personnelles</p>
                     <button class="switch-form-btn" onclick="switchToRegister()">
-                        <i class="fas fa-user-plus"></i> Sign Up
+                        <i class="fas fa-user-plus"></i> S'inscrire
                     </button>
                 </div>
                 <div class="register-side" style="display: none;">
-                    <h2>Hello, Friend!</h2>
-                    <p>Enter your personal details and start your journey with us</p>
+                    <h2>Bonjour!</h2>
+                    <p>Entrez vos informations personnelles et commencez votre voyage avec nous</p>
                     <button class="switch-form-btn" onclick="switchToLogin()">
-                        <i class="fas fa-sign-in-alt"></i> Sign In
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
                     </button>
                 </div>
             </div>
             
             <div class="form-container">
                 <div class="login-form">
-                    <h2 class="form-title">Sign In</h2>
+                    <h2 class="form-title">Connexion</h2>
                     <div class="error-message" id="login-error"></div>
                     <form id="loginForm" onsubmit="submitLogin(event)">
                         <input type="hidden" name="action" value="login">
                         <div class="form-group">
-                            <label for="login-username">Username or Email</label>
+                            <label for="login-username">Nom d'utilisateur ou Email</label>
                             <input type="text" id="login-username" name="username" required>
                         </div>
                         <div class="form-group">
-                            <label for="login-password">Password</label>
+                            <label for="login-password">Mot de passe</label>
                             <input type="password" id="login-password" name="password" required>
                         </div>
                         <button type="submit" class="submit-btn">
-                            <i class="fas fa-sign-in-alt"></i> Sign In
+                            <i class="fas fa-sign-in-alt"></i> Se connecter
                         </button>
                     </form>
                 </div>
 
                 <div class="register-form" style="display: none;">
-                    <h2 class="form-title">Create Account</h2>
+                    <h2 class="form-title">Créer un compte</h2>
                     <div class="error-message" id="register-error"></div>
                     <div class="success-message" id="register-success"></div>
                     <form id="registerForm" onsubmit="submitRegister(event)">
                         <input type="hidden" name="action" value="register">
-                        <div class="form-group">
-                            <label for="username">Username</label>
-                            <input type="text" id="username" name="username" required>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="username">Nom d'utilisateur</label>
+                                <input type="text" id="username" name="username" required 
+                                       pattern="[a-zA-Z0-9_]{3,50}" 
+                                       title="3 à 50 caractères, lettres, chiffres et underscore uniquement">
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" name="email" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="password">Mot de passe</label>
+                                <input type="password" id="password" name="password" required 
+                                       minlength="8" 
+                                       title="Au moins 8 caractères">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm_password">Confirmer le mot de passe</label>
+                                <input type="password" id="confirm_password" name="confirm_password" required>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" name="password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="confirm_password">Confirm Password</label>
-                            <input type="password" id="confirm_password" name="confirm_password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="full_name">Full Name</label>
+                            <label for="full_name">Nom complet</label>
                             <input type="text" id="full_name" name="full_name" required>
                         </div>
-                        <div class="form-group">
-                            <label for="phone">Phone</label>
-                            <input type="tel" id="phone" name="phone" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="address">Address</label>
-                            <input type="text" id="address" name="address" required>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="phone">Téléphone</label>
+                                <input type="tel" id="phone" name="phone" 
+                                       pattern="[0-9+\s-]{8,}" 
+                                       title="Numéro de téléphone valide">
+                            </div>
+                            <div class="form-group">
+                                <label for="address">Adresse</label>
+                                <input type="text" id="address" name="address">
+                            </div>
                         </div>
                         <button type="submit" class="submit-btn">
-                            <i class="fas fa-user-plus"></i> Sign Up
+                            <i class="fas fa-user-plus"></i> S'inscrire
                         </button>
                     </form>
                 </div>
@@ -548,6 +642,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 console.error('Error:', error);
             }
         }
+
+        // Password confirmation validation
+        document.getElementById('password')?.addEventListener('input', function() {
+            var confirmPassword = document.getElementById('confirm_password');
+            if (confirmPassword && this.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity("Les mots de passe ne correspondent pas");
+            } else if (confirmPassword) {
+                confirmPassword.setCustomValidity('');
+            }
+        });
+
+        document.getElementById('confirm_password')?.addEventListener('input', function() {
+            if (this.value !== document.getElementById('password').value) {
+                this.setCustomValidity("Les mots de passe ne correspondent pas");
+            } else {
+                this.setCustomValidity('');
+            }
+        });
     </script>
 </body>
 </html>

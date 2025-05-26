@@ -26,6 +26,7 @@ $user_id = $_SESSION['user_id'];
 $product_id = (int)$_POST['product_id'];
 
 try {
+    $conn = getConnection();
     // Start transaction to prevent race conditions
     $conn->beginTransaction();
     
