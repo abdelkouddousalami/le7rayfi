@@ -1,4 +1,3 @@
-// Constants and Utility Functions
 const CATEGORY_LABELS = {
     'pc': 'Ordinateurs',
     'laptop': 'Ordinateurs Portables',
@@ -7,12 +6,10 @@ const CATEGORY_LABELS = {
     'accessory': 'Accessoires'
 };
 
-// Utility function for category labels
 function getCategoryLabel(category) {
     return CATEGORY_LABELS[category] || category;
 }
 
-// Debounce utility function
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -26,7 +23,6 @@ function debounce(func, wait) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Cart functionality
     window.addToCart = async function(productId) {
         try {
             const response = await fetch('add_to_cart.php', {
@@ -39,19 +35,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.success) {
-                // Update cart count badge
                 const cartBadge = document.querySelector('.badge');
                 if (cartBadge) {
                     cartBadge.textContent = data.cartCount;
                 }
                 
-                // Show success message using a custom notification instead of alert
                 showNotification('success', data.message);
             } else {
-                // Show error message
                 showNotification('error', data.message);
                 
-                // Redirect to login if not authenticated
                 if (data.message.includes('connecter')) {
                     window.location.href = 'auth.php';
                 }
@@ -62,10 +54,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Make addToCart function globally available
     window.addToCart = addToCart;
 
-    // Cache all filter elements
     const elements = {
         productsGrid: document.querySelector('.products-grid'),
         priceMin: document.getElementById('priceMin'),
@@ -76,21 +66,17 @@ document.addEventListener('DOMContentLoaded', function() {
         pcFilters: document.getElementById('pc-filters'),
         mobileFilters: document.getElementById('mobile-filters'),
         activeFilters: document.getElementById('activeFilters'),
-        // PC specific filters
         ram: document.getElementById('ramFilter'),
         ssd: document.getElementById('ssdFilter'),
         processor: document.getElementById('processorFilter'),
-        // Mobile specific filters
         camera: document.getElementById('cameraFilter'),
         battery: document.getElementById('batteryFilter'),
         storage: document.getElementById('storageFilter')
     };
 
-    // Function to get current filter values
     function getFilterValues() {
         const filters = new URLSearchParams();
 
-        // Add price filters - only if they are valid
         const priceMin = parseFloat(elements.priceMin.value);
         const priceMax = parseFloat(elements.priceMax.value);
 
@@ -101,17 +87,14 @@ document.addEventListener('DOMContentLoaded', function() {
             filters.append('priceMax', priceMax.toString());
         }
 
-        // Add category filter
         if (elements.category.value) {
             filters.append('category', elements.category.value);
         }
 
-        // Add search term
         if (elements.search.value.trim()) {
             filters.append('search', elements.search.value.trim());
         }
 
-        // Add category-specific filters
         if (elements.category.value === 'pc') {
             if (elements.ram?.value) filters.append('ramFilter', elements.ram.value);
             if (elements.ssd?.value) filters.append('ssdFilter', elements.ssd.value);
@@ -125,9 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return filters;
     }
 
-    // Function to update products display
     async function updateProducts() {
-        // Show loading state
         elements.productsGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
 
         try {
@@ -163,7 +144,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to display products
     function displayProducts(products) {
         elements.productsGrid.innerHTML = products.map(product => {
             let specsList = '';
@@ -210,12 +190,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }).join('');
     }
 
-    // Function to update active filters display
     function updateActiveFilters() {
         elements.activeFilters.innerHTML = '';
         const activeFilters = [];
 
-        // Price filter
         const priceMin = parseFloat(elements.priceMin.value);
         const priceMax = parseFloat(elements.priceMax.value);
         if (!isNaN(priceMin) || !isNaN(priceMax)) {
@@ -229,7 +207,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Category filter
         if (elements.category.value) {
             activeFilters.push({
                 label: `Catégorie: ${getCategoryLabel(elements.category.value)}`,
@@ -242,7 +219,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Add other active filters based on category
         if (elements.category.value === 'pc') {
             if (elements.ram?.value) {
                 activeFilters.push({
@@ -305,7 +281,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Create and append filter tags
         activeFilters.forEach(filter => {
             const tag = document.createElement('span');
             tag.className = 'filter-tag';
@@ -319,14 +294,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Add event listeners with debouncing
     let debounceTimer;
     const debounce = (callback, time) => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(callback, time);
     };
 
-    // Price validation and filter event
     function validatePriceInput(input) {
         const value = parseFloat(input.value);
         if (isNaN(value) || value < 0) {
@@ -334,7 +307,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Price filter events
     elements.priceMin.addEventListener('input', (e) => {
         validatePriceInput(e.target);
         debounce(updateProducts, 500);
@@ -345,45 +317,35 @@ document.addEventListener('DOMContentLoaded', function() {
         debounce(updateProducts, 500);
     });
 
-    // Category filter event
     elements.category.addEventListener('change', () => {
-        // Toggle specification filters visibility
         elements.pcFilters.style.display = elements.category.value === 'pc' ? 'block' : 'none';
         elements.mobileFilters.style.display = elements.category.value === 'mobile' ? 'block' : 'none';
         updateProducts();
     });
 
-    // Search input event
     elements.search.addEventListener('input', () => debounce(updateProducts, 500));
 
-    // Add change event listeners to all specification filters
     ['ram', 'ssd', 'processor', 'camera', 'battery', 'storage'].forEach(filter => {
         elements[filter]?.addEventListener('change', updateProducts);
     });
 
-    // Reset filters event
     elements.resetBtn.addEventListener('click', () => {
-        // Reset all input values
         elements.priceMin.value = '';
         elements.priceMax.value = '';
         elements.search.value = '';
         elements.category.value = '';
         
-        // Reset all specification filters
         ['ram', 'ssd', 'processor', 'camera', 'battery', 'storage'].forEach(filter => {
             if (elements[filter]) elements[filter].value = '';
         });
 
-        // Hide specification filters
         elements.pcFilters.style.display = 'none';
         elements.mobileFilters.style.display = 'none';
 
-        // Update products
         updateProducts();
     });
 
-    // Function to get category label
-        // Function to show custom notifications
+
     function showNotification(type, message) {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
@@ -393,13 +355,11 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.body.appendChild(notification);
         
-        // Remove notification after 3 seconds
         setTimeout(() => {
             notification.classList.add('fade-out');
             setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
 
-    // Initial load
     updateProducts();
 });

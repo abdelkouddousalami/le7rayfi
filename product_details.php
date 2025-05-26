@@ -2,10 +2,8 @@
 session_start();
 require_once 'config/db.php';
 
-// Get product ID from URL
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Fetch product details
 $stmt = $conn->prepare("
     SELECT p.*, c.name as category_name, c.slug as category_slug 
     FROM products p 
@@ -15,13 +13,11 @@ $stmt = $conn->prepare("
 $stmt->execute([$product_id]);
 $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// If product not found, redirect to home
 if (!$product) {
     header('Location: index.php');
     exit();
 }
 
-// Get related products from same category
 $stmt = $conn->prepare("
     SELECT * FROM products 
     WHERE category_id = ? AND id != ? 
@@ -32,6 +28,7 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,6 +37,7 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="./assets/css/index.css?<?php echo time(); ?>">
     <link rel="stylesheet" href="./assets/css/product-details.css?<?php echo time(); ?>">
 </head>
+
 <body>
 
     <main class="product-details-container">
@@ -56,9 +54,9 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="product-details">
             <div class="product-gallery">
                 <div class="main-image">
-                    <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
-                         alt="<?php echo htmlspecialchars($product['name']); ?>" 
-                         id="mainImage">
+                    <img src="<?php echo htmlspecialchars($product['image_url']); ?>"
+                        alt="<?php echo htmlspecialchars($product['name']); ?>"
+                        id="mainImage">
                     <?php if ($product['stock'] < 5 && $product['stock'] > 0): ?>
                         <span class="stock-warning">Plus que <?php echo $product['stock']; ?> en stock!</span>
                     <?php endif; ?>
@@ -67,7 +65,7 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <div class="product-info">
                 <h1 class="product-title"><?php echo htmlspecialchars($product['name']); ?></h1>
-                
+
                 <div class="product-meta">
                     <span class="category">
                         <i class="fas fa-tag"></i>
@@ -91,86 +89,86 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <div class="product-description">
                     <?php echo nl2br(htmlspecialchars($product['description'])); ?>
-                </div>                <?php if ($product['category_slug'] === 'laptops' || $product['category_slug'] === 'desktops'): ?>
-                <div class="product-specs">
-                    <div class="specs-grid">
-                        <?php if ($product['ram']): ?>
-                        <div class="spec-item">
-                            <div class="spec-icon">
-                                <i class="fas fa-memory"></i>
-                            </div>
-                            <div class="spec-content">
-                                <span class="spec-label">Mémoire RAM</span>
-                                <span class="spec-value"><?php echo htmlspecialchars($product['ram']); ?></span>
-                            </div>
-                        </div>
-                        <?php endif; ?>
+                </div> <?php if ($product['category_slug'] === 'laptops' || $product['category_slug'] === 'desktops'): ?>
+                    <div class="product-specs">
+                        <div class="specs-grid">
+                            <?php if ($product['ram']): ?>
+                                <div class="spec-item">
+                                    <div class="spec-icon">
+                                        <i class="fas fa-memory"></i>
+                                    </div>
+                                    <div class="spec-content">
+                                        <span class="spec-label">Mémoire RAM</span>
+                                        <span class="spec-value"><?php echo htmlspecialchars($product['ram']); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
-                        <?php if ($product['storage']): ?>
-                        <div class="spec-item">
-                            <div class="spec-icon">
-                                <i class="fas fa-hdd"></i>
-                            </div>
-                            <div class="spec-content">
-                                <span class="spec-label">Stockage</span>
-                                <span class="spec-value"><?php echo htmlspecialchars($product['storage']); ?></span>
-                            </div>
-                        </div>
-                        <?php endif; ?>
+                            <?php if ($product['storage']): ?>
+                                <div class="spec-item">
+                                    <div class="spec-icon">
+                                        <i class="fas fa-hdd"></i>
+                                    </div>
+                                    <div class="spec-content">
+                                        <span class="spec-label">Stockage</span>
+                                        <span class="spec-value"><?php echo htmlspecialchars($product['storage']); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
-                        <?php if ($product['processor']): ?>
-                        <div class="spec-item">
-                            <div class="spec-icon">
-                                <i class="fas fa-microchip"></i>
-                            </div>
-                            <div class="spec-content">
-                                <span class="spec-label">Processeur</span>
-                                <span class="spec-value"><?php echo htmlspecialchars($product['processor']); ?></span>
-                            </div>
+                            <?php if ($product['processor']): ?>
+                                <div class="spec-item">
+                                    <div class="spec-icon">
+                                        <i class="fas fa-microchip"></i>
+                                    </div>
+                                    <div class="spec-content">
+                                        <span class="spec-label">Processeur</span>
+                                        <span class="spec-value"><?php echo htmlspecialchars($product['processor']); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                        <?php endif; ?>
                     </div>
-                </div>
-                <?php endif; ?>                <?php if ($product['category_slug'] === 'smartphones' || $product['category_slug'] === 'tablets'): ?>
-                <div class="product-specs">
-                    <div class="specs-grid">
-                        <?php if ($product['storage']): ?>
-                        <div class="spec-item">
-                            <div class="spec-icon">
-                                <i class="fas fa-hdd"></i>
-                            </div>
-                            <div class="spec-content">
-                                <span class="spec-label">Stockage</span>
-                                <span class="spec-value"><?php echo htmlspecialchars($product['storage']); ?></span>
-                            </div>
-                        </div>
-                        <?php endif; ?>
+                <?php endif; ?> <?php if ($product['category_slug'] === 'smartphones' || $product['category_slug'] === 'tablets'): ?>
+                    <div class="product-specs">
+                        <div class="specs-grid">
+                            <?php if ($product['storage']): ?>
+                                <div class="spec-item">
+                                    <div class="spec-icon">
+                                        <i class="fas fa-hdd"></i>
+                                    </div>
+                                    <div class="spec-content">
+                                        <span class="spec-label">Stockage</span>
+                                        <span class="spec-value"><?php echo htmlspecialchars($product['storage']); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
-                        <?php if ($product['camera']): ?>
-                        <div class="spec-item">
-                            <div class="spec-icon">
-                                <i class="fas fa-camera"></i>
-                            </div>
-                            <div class="spec-content">
-                                <span class="spec-label">Appareil Photo</span>
-                                <span class="spec-value"><?php echo htmlspecialchars($product['camera']); ?></span>
-                            </div>
-                        </div>
-                        <?php endif; ?>
+                            <?php if ($product['camera']): ?>
+                                <div class="spec-item">
+                                    <div class="spec-icon">
+                                        <i class="fas fa-camera"></i>
+                                    </div>
+                                    <div class="spec-content">
+                                        <span class="spec-label">Appareil Photo</span>
+                                        <span class="spec-value"><?php echo htmlspecialchars($product['camera']); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
-                        <?php if ($product['battery']): ?>
-                        <div class="spec-item">
-                            <div class="spec-icon">
-                                <i class="fas fa-battery-full"></i>
-                            </div>
-                            <div class="spec-content">
-                                <span class="spec-label">Batterie</span>
-                                <span class="spec-value"><?php echo htmlspecialchars($product['battery']); ?></span>
-                            </div>
+                            <?php if ($product['battery']): ?>
+                                <div class="spec-item">
+                                    <div class="spec-icon">
+                                        <i class="fas fa-battery-full"></i>
+                                    </div>
+                                    <div class="spec-content">
+                                        <span class="spec-label">Batterie</span>
+                                        <span class="spec-value"><?php echo htmlspecialchars($product['battery']); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                        <?php endif; ?>
                     </div>
-                </div>
                 <?php endif; ?>
 
                 <div class="product-actions">
@@ -200,29 +198,28 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <?php if (!empty($related_products)): ?>
-        <section class="related-products">
-            <h2>Produits Similaires</h2>
-            <div class="products-grid">
-                <?php foreach ($related_products as $related): ?>
-                <div class="product-card">
-                    <img src="<?php echo htmlspecialchars($related['image_url']); ?>" 
-                         alt="<?php echo htmlspecialchars($related['name']); ?>" 
-                         class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title"><?php echo htmlspecialchars($related['name']); ?></h3>
-                        <p><?php echo htmlspecialchars($related['description']); ?></p>
-                        <div class="product-price"><?php echo number_format($related['price'], 2); ?> DH</div>
-                        <a href="product_details.php?id=<?php echo $related['id']; ?>" class="view-details-btn">
-                            Voir les détails
-                        </a>
-                    </div>
+            <section class="related-products">
+                <h2>Produits Similaires</h2>
+                <div class="products-grid">
+                    <?php foreach ($related_products as $related): ?>
+                        <div class="product-card">
+                            <img src="<?php echo htmlspecialchars($related['image_url']); ?>"
+                                alt="<?php echo htmlspecialchars($related['name']); ?>"
+                                class="product-image">
+                            <div class="product-info">
+                                <h3 class="product-title"><?php echo htmlspecialchars($related['name']); ?></h3>
+                                <p><?php echo htmlspecialchars($related['description']); ?></p>
+                                <div class="product-price"><?php echo number_format($related['price'], 2); ?> DH</div>
+                                <a href="product_details.php?id=<?php echo $related['id']; ?>" class="view-details-btn">
+                                    Voir les détails
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
-            </div>
-        </section>
+            </section>
         <?php endif; ?>
     </main>
-
 
     <script>
         function updateQuantity(change) {
@@ -230,58 +227,9 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const newValue = Math.max(1, Math.min(<?php echo $product['stock']; ?>, parseInt(input.value) + change));
             input.value = newValue;
         }
-
-        function getQuantity() {
-            return parseInt(document.getElementById('quantity').value) || 1;
-        }
-
-        // Enhanced addToCart function
-        async function addToCart(productId, quantity) {
-            try {
-                const response = await fetch('add_to_cart.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `product_id=${productId}&quantity=${quantity}`
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Update cart count
-                    const cartBadge = document.querySelector('.badge');
-                    if (cartBadge) {
-                        cartBadge.textContent = data.cartCount;
-                        cartBadge.style.display = data.cartCount > 0 ? 'block' : 'none';
-                    }
-                    
-                    // Show success notification
-                    showNotification('success', data.message);
-                } else {
-                    // Show error notification
-                    showNotification('error', data.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showNotification('error', 'Une erreur est survenue');
-            }
-        }
-
-        function showNotification(type, message) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-                ${message}
-            `;
-            document.body.appendChild(notification);
-
-            // Remove notification after 3 seconds
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
     </script>
+    <script src="/assets/js/details.js"></script>
+
 </body>
+
 </html>

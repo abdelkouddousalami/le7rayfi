@@ -23,10 +23,8 @@ $cart_id = (int)$_POST['cart_id'];
 $action = $_POST['action'];
 
 try {
-    // Start transaction
     $conn->beginTransaction();
     
-    // Get current cart item and product details
     $stmt = $conn->prepare("
         SELECT c.quantity, p.stock, c.product_id
         FROM cart c
@@ -69,11 +67,9 @@ try {
         $newQuantity--;
     }
     
-    // Update quantity
     $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
     $stmt->execute([$newQuantity, $cart_id, $_SESSION['user_id']]);
     
-    // Commit transaction
     $conn->commit();
     
     echo json_encode([

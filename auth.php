@@ -33,21 +33,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         $errors = [];
         
-        // Validate username
         $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
         $stmt->execute([$username]);
         if ($stmt->rowCount() > 0) {
             $errors[] = "Username already taken";
         }
         
-        // Validate email
         $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->rowCount() > 0) {
             $errors[] = "Email already in use";
         }
         
-        // Validate password
         if ($password !== $confirm_password) {
             $errors[] = "Passwords do not match";
         }
@@ -377,7 +374,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
     <nav class="nav-container">
         <div class="nav-content">
             <a href="index.php" class="logo">

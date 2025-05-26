@@ -83,7 +83,6 @@ if (isset($_SESSION['user_id'])) {
             <h3 class="sidebar-title">Catégories</h3>
             <ul class="category-list">
                 <?php
-                // Get categories with product counts
                 $categoryQuery = "SELECT c.*, COUNT(p.id) as product_count 
                                 FROM categories c 
                                 LEFT JOIN products p ON p.category_id = c.id 
@@ -395,7 +394,6 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </section>
 
-    <!-- Footer Section -->
     <footer class="footer">
     <div class="footer-wave"></div>
     <div class="footer-container">
@@ -458,12 +456,10 @@ if (isset($_SESSION['user_id'])) {
     </div>
 </footer>
 
-    <!-- WhatsApp Button -->
     <a href="https://wa.me/212500000000" class="whatsapp-button">
         <i class="fab fa-whatsapp"></i>
     </a>    <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // User menu functionality
             const userMenuBtn = document.getElementById('userMenuBtn');
             const userDropdown = document.getElementById('userDropdown');
             
@@ -575,7 +571,6 @@ if (isset($_SESSION['user_id'])) {
             </div>
 
             <div class="active-filters" id="activeFilters">
-                <!-- Active filters will be displayed here -->
             </div>
 
             <button class="filter-reset" id="resetFilters">
@@ -583,371 +578,8 @@ if (isset($_SESSION['user_id'])) {
                 Réinitialiser les filtres
             </button>
         </div>
-    </aside>    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Elements
-            const productsGrid = document.querySelector('.products-grid');
-            const filterAside = document.querySelector('.filter-aside');
-            const filterToggle = document.querySelector('.filter-toggle');
-            
-            // Get all available filter options from the server
-            function loadFilterOptions() {
-                fetch('get_filtered_products.php?get_options=1')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            updateFilterOptions(data.options);
-                        }
-                    })
-                    .catch(error => console.error('Error loading filter options:', error));
-            }
-
-            // Update filter dropdowns with available options
-            function updateFilterOptions(options) {
-                // Update category filter
-                const categoryFilter = document.getElementById('categoryFilter');
-                categoryFilter.innerHTML = `
-                    <option value="">Toutes les catégories</option>
-                    ${options.categories.map(category => `
-                        <option value="${category}">${
-                            category === 'pc' ? 'Ordinateurs' :
-                            category === 'mobile' ? 'Mobiles' :
-                            category === 'accessory' ? 'Accessoires' : category
-                        }</option>
-                    `).join('')}
-                `;
-
-                // Update PC filters
-                if (options.pc) {
-                    const ramSelect = document.getElementById('ramFilter');
-                    const storageSelect = document.getElementById('ssdFilter');
-                    const processorSelect = document.getElementById('processorFilter');
-
-                    if (ramSelect) {
-                        ramSelect.innerHTML = `
-                            <option value="">RAM</option>
-                            ${options.pc.ram.sort().map(ram => 
-                                `<option value="${ram}">${ram}</option>`
-                            ).join('')}
-                        `;
-                    }
-
-                    if (storageSelect) {
-                        storageSelect.innerHTML = `
-                            <option value="">Stockage</option>
-                            ${options.pc.storage.sort().map(storage => 
-                                `<option value="${storage}">${storage}</option>`
-                            ).join('')}
-                        `;
-                    }
-
-                    if (processorSelect) {
-                        processorSelect.innerHTML = `
-                            <option value="">Processeur</option>
-                            ${options.pc.processor.sort().map(processor => 
-                                `<option value="${processor}">${processor}</option>`
-                            ).join('')}
-                        `;
-                    }
-                }
-
-                // Update Mobile filters
-                if (options.mobile) {
-                    const cameraSelect = document.getElementById('cameraFilter');
-                    const batterySelect = document.getElementById('batteryFilter');
-                    const storageSelect = document.getElementById('storageFilter');
-
-                    if (cameraSelect) {
-                        cameraSelect.innerHTML = `
-                            <option value="">Appareil photo</option>
-                            ${options.mobile.camera.sort().map(camera => 
-                                `<option value="${camera}">${camera}</option>`
-                            ).join('')}
-                        `;
-                    }
-
-                    if (batterySelect) {
-                        batterySelect.innerHTML = `
-                            <option value="">Batterie</option>
-                            ${options.mobile.battery.sort().map(battery => 
-                                `<option value="${battery}">${battery}</option>`
-                            ).join('')}
-                        `;
-                    }
-
-                    if (storageSelect) {
-                        storageSelect.innerHTML = `
-                            <option value="">Stockage</option>
-                            ${options.mobile.storage.sort().map(storage => 
-                                `<option value="${storage}">${storage}</option>`
-                            ).join('')}
-                        `;
-                    }
-                }
-
-                // Update price range inputs
-                if (options.price) {
-                    const priceMin = document.getElementById('priceMin');
-                    const priceMax = document.getElementById('priceMax');
-                    
-                    if (priceMin && priceMax) {
-                        priceMin.placeholder = `Min (${Math.floor(options.price.min)} DH)`;
-                        priceMax.placeholder = `Max (${Math.ceil(options.price.max)} DH)`;
-                        priceMin.min = Math.floor(options.price.min);
-                        priceMax.max = Math.ceil(options.price.max);
-                    }
-                }
-            }
-            const searchInput = document.getElementById('productSearch');
-            const categoryFilter = document.getElementById('categoryFilter');
-            const pcFilters = document.getElementById('pc-filters');
-            const mobileFilters = document.getElementById('mobile-filters');
-            const resetFilters = document.getElementById('resetFilters');
-            const activeFilters = document.getElementById('activeFilters');
-            const priceMin = document.getElementById('priceMin');
-            const priceMax = document.getElementById('priceMax');
-            
-            let currentFilters = {};
-            let searchTimeout;
-
-            // Initialize loading state
-            const loadingSpinner = document.createElement('div');
-            loadingSpinner.className = 'loading-spinner';
-            loadingSpinner.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            
-            // Toggle filter panel
-            filterToggle.addEventListener('click', () => {
-                filterAside.classList.toggle('active');
-            });
-
-            // Search with debounce
-            searchInput.addEventListener('input', debounce(function(e) {
-                currentFilters.search = e.target.value;
-                updateActiveFilters();
-                fetchFilteredProducts();
-            }, 500));            // Load filter options when page loads
-            loadFilterOptions();
-
-            // Category filter
-            categoryFilter.addEventListener('change', function() {
-                currentFilters.category = this.value;
-                pcFilters.style.display = this.value === 'pc' ? 'block' : 'none';
-                mobileFilters.style.display = this.value === 'mobile' ? 'block' : 'none';
-                
-                // Clear other filters when category changes
-                if (this.value === 'pc') {
-                    ['cameraFilter', 'batteryFilter', 'storageFilter'].forEach(id => {
-                        const element = document.getElementById(id);
-                        if (element) element.value = '';
-                        delete currentFilters[id];
-                    });
-                } else if (this.value === 'mobile') {
-                    ['ramFilter', 'ssdFilter', 'processorFilter'].forEach(id => {
-                        const element = document.getElementById(id);
-                        if (element) element.value = '';
-                        delete currentFilters[id];
-                    });
-                }
-                
-                updateActiveFilters();
-                fetchFilteredProducts();
-            });
-
-            // Price range filters
-            [priceMin, priceMax].forEach(input => {
-                input.addEventListener('change', function() {
-                    currentFilters.priceMin = priceMin.value || null;
-                    currentFilters.priceMax = priceMax.value || null;
-                    updateActiveFilters();
-                    fetchFilteredProducts();
-                });
-            });
-
-            // PC Specification filters
-            ['ramFilter', 'ssdFilter', 'processorFilter'].forEach(filterId => {
-                document.getElementById(filterId)?.addEventListener('change', function() {
-                    currentFilters[filterId] = this.value;
-                    updateActiveFilters();
-                    fetchFilteredProducts();
-                });
-            });
-
-            // Mobile Specification filters
-            ['cameraFilter', 'batteryFilter', 'storageFilter'].forEach(filterId => {
-                document.getElementById(filterId)?.addEventListener('change', function() {
-                    currentFilters[filterId] = this.value;
-                    updateActiveFilters();
-                    fetchFilteredProducts();
-                });
-            });            // Reset filters
-            resetFilters.addEventListener('click', function() {
-                // Reset all form elements
-                searchInput.value = '';
-                categoryFilter.value = '';
-                priceMin.value = '';
-                priceMax.value = '';
-                document.querySelectorAll('.filter-dropdown').forEach(select => select.value = '');
-                
-                // Reset filter states
-                pcFilters.style.display = 'none';
-                mobileFilters.style.display = 'none';
-                currentFilters = {};
-                
-                // Visual feedback
-                resetFilters.classList.add('spinning');
-                setTimeout(() => resetFilters.classList.remove('spinning'), 500);
-                
-                // Reload filter options and update UI
-                loadFilterOptions();
-                updateActiveFilters();
-                fetchFilteredProducts();
-            });
-
-            // Update active filters display
-            function updateActiveFilters() {
-                activeFilters.innerHTML = '';
-                
-                Object.entries(currentFilters).forEach(([key, value]) => {
-                    if (value && value !== '') {
-                        const badge = document.createElement('span');
-                        badge.className = 'filter-badge';
-                        badge.innerHTML = `
-                            ${getFilterLabel(key)}: ${value}
-                            <i class="fas fa-times" data-filter="${key}"></i>
-                        `;
-                        activeFilters.appendChild(badge);
-
-                        // Add click handler to remove filter
-                        badge.querySelector('i').addEventListener('click', function() {
-                            const filterKey = this.dataset.filter;
-                            delete currentFilters[filterKey];
-                            
-                            // Reset corresponding form element
-                            const element = document.getElementById(filterKey);
-                            if (element) element.value = '';
-                            
-                            updateActiveFilters();
-                            fetchFilteredProducts();
-                        });
-                    }
-                });
-            }
-
-            // Helper function to get filter labels
-            function getFilterLabel(key) {
-                const labels = {
-                    search: 'Recherche',
-                    category: 'Catégorie',
-                    priceMin: 'Prix min',
-                    priceMax: 'Prix max',
-                    ramFilter: 'RAM',
-                    ssdFilter: 'Stockage PC',
-                    processorFilter: 'Processeur',
-                    cameraFilter: 'Appareil photo',
-                    batteryFilter: 'Batterie',
-                    storageFilter: 'Stockage Mobile'
-                };
-                return labels[key] || key;
-            }
-
-            // Debounce helper function
-            function debounce(func, wait) {
-                let timeout;
-                return function executedFunction(...args) {
-                    const later = () => {
-                        clearTimeout(timeout);
-                        func(...args);
-                    };
-                    clearTimeout(timeout);
-                    timeout = setTimeout(later, wait);
-                };
-            }
-
-            // Fetch filtered products
-            function fetchFilteredProducts() {
-                // Show loading state
-                productsGrid.style.opacity = '0.5';
-                productsGrid.appendChild(loadingSpinner);
-
-                const queryParams = new URLSearchParams();
-                Object.entries(currentFilters).forEach(([key, value]) => {
-                    if (value) queryParams.append(key, value);
-                });
-
-                fetch(`get_filtered_products.php?${queryParams.toString()}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            updateProductsGrid(data.products);
-                        } else {
-                            console.error('Error:', data.message);
-                        }
-                    })
-                    .catch(error => console.error('Error:', error))
-                    .finally(() => {
-                        productsGrid.removeChild(loadingSpinner);
-                        productsGrid.style.opacity = '1';
-                    });
-            }
-
-            // Update products grid
-            function updateProductsGrid(products) {
-                productsGrid.style.opacity = '0';
-                
-                setTimeout(() => {
-                    if (products.length === 0) {
-                        productsGrid.innerHTML = `
-                            <div class="no-results">
-                                <i class="fas fa-search"></i>
-                                <p>Aucun produit ne correspond à vos critères de recherche</p>
-                            </div>
-                        `;
-                    } else {
-                        productsGrid.innerHTML = products.map(product => `
-                            <div class="product-card" data-category="${product.category}">
-                                <div class="product-image-container">
-                                    <img src="${product.image_url}" 
-                                         alt="${product.name}" 
-                                         class="product-image">
-                                    ${product.stock < 5 && product.stock > 0 ? 
-                                        `<span class="stock-warning">Plus que ${product.stock} en stock!</span>` : ''}
-                                </div>
-                                <div class="product-info">
-                                    <h3 class="product-title">${product.name}</h3>
-                                    <p class="product-description">${product.description}</p>
-                                    <div class="product-specs">
-                                        ${product.specs.map(spec => `
-                                            <span class="spec-badge">
-                                                <i class="fas fa-${spec.includes('RAM') ? 'memory' : 
-                                                                   spec.includes('Storage') ? 'hdd' :
-                                                                   spec.includes('Camera') ? 'camera' :
-                                                                   spec.includes('Battery') ? 'battery-full' :
-                                                                   'microchip'}"></i>
-                                                ${spec}
-                                            </span>
-                                        `).join('')}
-                                    </div>
-                                    <div class="product-price">${Number(product.price).toFixed(2)} DH</div>
-                                    ${product.stock > 0 ? 
-                                        `<a href="#" class="product-button" onclick="addToCart(${product.id})">
-                                            <i class="fas fa-shopping-cart"></i> Ajouter au panier
-                                        </a>` :
-                                        `<button class="product-button out-of-stock" disabled>
-                                            <i class="fas fa-times"></i> Rupture de stock
-                                        </button>`
-                                    }
-                                </div>
-                            </div>
-                        `).join('');
-                    }
-                    productsGrid.style.opacity = '1';
-                }, 300);
-            }
-
-            // Initial load
-            fetchFilteredProducts();
-        });
-    </script>    <!-- Search Extension -->
+    </aside>   
+     <script src="/assets/js/filter.js"></script>
     <div class="search-wrapper">
         <div class="search-toggle">
             <i class="fas fa-search"></i>
@@ -978,7 +610,6 @@ if (isset($_SESSION['user_id'])) {
 
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script>
-        // Search extension functionality
         document.addEventListener('DOMContentLoaded', function() {
             const searchToggle = document.getElementById('searchToggle');
             const searchExtension = document.getElementById('searchExtension');
@@ -986,20 +617,17 @@ if (isset($_SESSION['user_id'])) {
             const quickSearchCategory = document.getElementById('quickSearchCategory');
             const searchResults = document.getElementById('searchResults');
 
-            // Toggle search extension
             searchToggle.addEventListener('click', function() {
                 searchExtension.classList.toggle('active');
                 quickSearch.focus();
             });
 
-            // Close search extension when clicking outside
             document.addEventListener('click', function(e) {
                 if (!searchExtension.contains(e.target) && !searchToggle.contains(e.target)) {
                     searchExtension.classList.remove('active');
                 }
             });
 
-            // Fetch and display search results
             quickSearch.addEventListener('input', debounce(function() {
                 const query = this.value;
                 const category = quickSearchCategory.value;
@@ -1009,14 +637,11 @@ if (isset($_SESSION['user_id'])) {
                     return;
                 }
 
-                // Simulate server request
                 setTimeout(() => {
-                    // For demo, we use static data
                     const products = [
                         { id: 1, name: 'MacBook Pro M2', category: 'pc', image_url: 'img/best-laptops-20240516-medium.jpg', price: 25999 },
                         { id: 2, name: 'MSI Gaming Laptop', category: 'pc', image_url: 'img/laptop.jpg', price: 15499 },
                         { id: 3, name: 'iPhone 15 Pro', category: 'mobile', image_url: 'img/phone.png', price: 13999 },
-                        // Add more products as needed
                     ];
 
                     const filteredProducts = products.filter(product => {
@@ -1029,7 +654,6 @@ if (isset($_SESSION['user_id'])) {
                 }, 300);
             }, 300));
 
-            // Display search results
             function displaySearchResults(products) {
                 searchResults.innerHTML = '';
 

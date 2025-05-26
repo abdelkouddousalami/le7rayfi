@@ -23,7 +23,6 @@ if (!isset($_POST['cart_id'])) {
 $cart_id = (int)$_POST['cart_id'];
 
 try {
-    // Verify the item belongs to the user before deleting
     $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
     $result = $stmt->execute([$cart_id, $_SESSION['user_id']]);
     

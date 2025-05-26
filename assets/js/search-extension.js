@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Elements
     const searchWrapper = document.querySelector('.search-wrapper');
     const quickSearch = document.getElementById('quickSearch');
     const quickSearchCategory = document.getElementById('quickSearchCategory');
@@ -9,9 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let pusher;
     let channel;
 
-    // Initialize Pusher if key is provided
     function initializePusher() {
-        // Only initialize if Pusher is defined and keys are provided
         if (typeof Pusher !== 'undefined' && window.PUSHER_KEY && window.PUSHER_CLUSTER) {
             pusher = new Pusher(window.PUSHER_KEY, {
                 cluster: window.PUSHER_CLUSTER
@@ -24,21 +21,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Focus search input when hovering over the search wrapper
     searchWrapper.addEventListener('mouseenter', () => {
         setTimeout(() => {
             quickSearch?.focus();
-        }, 300); // Delay to match the CSS transition
+        }, 300);
     });
 
-    // Optional: Clear search when mouse leaves
     searchWrapper.addEventListener('mouseleave', () => {
-        // Uncomment to clear results on mouse leave
-        // searchResults.innerHTML = '';
-        // quickSearch.value = '';
+       
     });
 
-    // Handle search input with debounce
     quickSearch.addEventListener('input', debounce(handleSearch, 500));
     quickSearchCategory.addEventListener('change', handleSearch);
 
@@ -83,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         products.forEach((product, index) => {
             const resultItem = createResultItem(product);
-            // Add stagger animation delay
             resultItem.style.animationDelay = `${index * 0.1}s`;
             searchResults.appendChild(resultItem);
         });
@@ -92,7 +83,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function createResultItem(product) {
         const div = document.createElement('div');
         div.className = 'result-item';
-        // Make the entire item clickable
         div.style.cursor = 'pointer';
         div.onclick = () => window.location.href = `product_details.php?id=${product.id}`;
         
@@ -180,7 +170,6 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    // Initialize Pusher if available
     if (typeof Pusher !== 'undefined') {
         initializePusher();
     }

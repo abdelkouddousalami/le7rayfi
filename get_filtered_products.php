@@ -2,7 +2,6 @@
 header('Content-Type: application/json');
 require_once 'config/db.php';
 
-// Function to get unique values for a field
 function getUniqueValues($conn, $field, $category = null) {
     $query = "SELECT DISTINCT $field FROM products WHERE $field IS NOT NULL";
     if ($category) {
@@ -17,7 +16,6 @@ function getUniqueValues($conn, $field, $category = null) {
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-// Get filter options if requested
 if (isset($_GET['get_options'])) {
     try {
         $filterOptions = [
@@ -76,7 +74,6 @@ try {
         exit;
     }
 
-    // Add price range conditions
     if ($priceMin !== null) {
         $conditions[] = "price >= ?";
         $params[] = $priceMin;
@@ -86,14 +83,12 @@ try {
         $params[] = $priceMax;
     }
 
-    // Search functionality with exact matching for specifications
     if ($search) {
         $searchTerms = explode(' ', trim($search));
         $searchConditions = [];
         
         foreach ($searchTerms as $term) {
             if (is_numeric($term)) {
-                // For numeric terms, search with exact matches in price and specifications
                 $searchConditions[] = "
                     (price = ? OR 
                     ram = ? OR 
@@ -105,14 +100,13 @@ try {
 
                 $term = trim($term);
                 $params[] = $term;
-                $params[] = $term; // RAM exact match
-                $params[] = $term; // Storage exact match
-                $params[] = $term; // Processor exact match
-                $params[] = $term; // Camera exact match
-                $params[] = $term; // Battery exact match
-                $params[] = "%{$term}%"; // Name partial match
+                $params[] = $term; 
+                $params[] = $term; 
+                $params[] = $term;
+                $params[] = $term; 
+                $params[] = $term; 
+                $params[] = "%{$term}%"; 
             } else {
-                // For text terms, use exact match for specifications and partial match for name/description
                 $specSearchTerm = mb_strtolower($term);
                 $searchConditions[] = "
                     (LOWER(name) LIKE ? OR 
@@ -122,13 +116,13 @@ try {
                     LOWER(processor) = ? OR 
                     LOWER(camera) = ? OR 
                     LOWER(battery) = ?)";
-                $params[] = "%{$specSearchTerm}%"; // Name partial match
-                $params[] = "%{$specSearchTerm}%"; // Description partial match
-                $params[] = $specSearchTerm; // RAM exact match
-                $params[] = $specSearchTerm; // Storage exact match
-                $params[] = $specSearchTerm; // Processor exact match
-                $params[] = $specSearchTerm; // Camera exact match
-                $params[] = $specSearchTerm; // Battery exact match
+                $params[] = "%{$specSearchTerm}%"; 
+                $params[] = "%{$specSearchTerm}%"; 
+                $params[] = $specSearchTerm; 
+                $params[] = $specSearchTerm; 
+                $params[] = $specSearchTerm; 
+                $params[] = $specSearchTerm; 
+                $params[] = $specSearchTerm;
             }
         }
         
@@ -137,13 +131,11 @@ try {
         }
     }
 
-    // Category filter
     if ($category && $category !== 'all') {
         $conditions[] = "LOWER(category) = LOWER(?)";
         $params[] = $category;
     }
 
-    // PC Specifications - exact matches
     if ($ram) {
         $conditions[] = "LOWER(ram) = LOWER(?)";
         $params[] = $ram;
@@ -159,7 +151,6 @@ try {
         $params[] = $processor;
     }
 
-    // Mobile Specifications - exact matches
     if ($camera) {
         $conditions[] = "LOWER(camera) = LOWER(?)";
         $params[] = $camera;
@@ -175,19 +166,16 @@ try {
         $params[] = $phoneStorage;
     }
 
-    // Build the final query
     $query = "SELECT * FROM products";
     if (!empty($conditions)) {
         $query .= " WHERE " . implode(" AND ", $conditions);
     }
-    $query .= " ORDER BY price ASC"; // Sort by price ascending
+    $query .= " ORDER BY price ASC";
 
-    // Execute the query
     $stmt = $conn->prepare($query);
     $stmt->execute($params);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Format the response
     $formattedProducts = array_map(function($product) {
         $specs = [];
         
