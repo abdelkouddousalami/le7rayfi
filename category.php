@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/db.php';
+$conn = getConnection();
 $slug = isset($_GET['slug']) ? $_GET['slug'] : '';
 $categoryQuery = "SELECT * FROM categories WHERE slug = ?";
 $stmt = $conn->prepare($categoryQuery);

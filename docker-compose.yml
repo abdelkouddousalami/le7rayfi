@@ -1,0 +1,38 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: Le7rayfi_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: le7rayfi
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports: 
+      - "3300:3306"
+    volumes: 
+      - le7rayfi_mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: Le7rayfi_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "8080:80"
+
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: le7rayfi_php
+    restart: always
+    volumes: 
+      - .:/var/www/html
+    ports:
+      - "8002:80"
+
+volumes:
+  le7rayfi_mysql_data:
