@@ -48,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $filename = uniqid() . '.' . $file_extension;
         $target_path = $upload_dir . $filename;
         
+        // Move uploaded file
         if (move_uploaded_file($_FILES['image']['tmp_name'], $target_path)) {
             $image_url = 'uploads/products/' . $filename;
         }
@@ -111,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <select name="category" id="category" class="form-control" required onchange="toggleSpecifications()">
                     <option value="">Sélectionner une catégorie</option>
                     <?php
+                    // Fetch categories from database
                     $stmt = $conn->query("SELECT * FROM categories ORDER BY name");
                     while ($cat = $stmt->fetch(PDO::FETCH_ASSOC)):
                     ?>
@@ -125,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="image">Image:</label>
                 <input type="file" name="image" id="image" class="form-control-file" accept="image/*" required>
-            </div>  
+            </div>            <!-- PC Specifications -->
             <div id="pcSpecs" class="specs-container">
                 <h4 class="specs-title"><i class="fas fa-laptop"></i> Spécifications PC</h4>
                 <div class="specs-grid">
@@ -222,8 +224,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <button type="submit" class="btn btn-primary mt-3">Ajouter le Produit</button>
         </form>
-    </div>    
-    
+    </div>    <style>
+        .specs-container {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            display: none;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #e9ecef;
+        }
+        .specs-container.show {
+            opacity: 1;
+            transform: translateY(0);
+            display: block;
+        }
+        .specs-title {
+            color: #333;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+        }
+        .specs-title i {
+            color: #4a90e2;
+            font-size: 1.4rem;
+        }
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .form-field-animation {
+            transition: all 0.3s ease;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            padding: 8px 12px;
+        }
+        .form-field-animation.highlight {
+            background-color: rgba(74, 144, 226, 0.1);
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
+        }
+        .form-group label i {
+            color: #4a90e2;
+            width: 20px;
+            text-align: center;
+        }
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ced4da;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        .form-group select:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
     <script>
         function toggleSpecifications() {
             const categorySelect = document.getElementById('category');
@@ -233,6 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const pcSpecs = document.getElementById('pcSpecs');
             const mobileSpecs = document.getElementById('mobileSpecs');
             
+            // Hide all specs with animation
             [pcSpecs, mobileSpecs].forEach(container => {
                 if (container.classList.contains('show')) {
                     container.classList.remove('show');
@@ -242,6 +327,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
             
+            // Reset and remove highlight from all fields
             const allFields = ['ram', 'storage', 'processor', 'phone_storage', 'camera', 'battery'];
             allFields.forEach(field => {
                 const element = document.getElementById(field);
@@ -251,6 +337,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
             
+            // Determine which specs to show based on category
             let targetSpecs = null;
             let requiredFields = [];
             
@@ -262,12 +349,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 requiredFields = ['phone_storage', 'camera', 'battery'];
             }
             
+            // Show and animate relevant specs
             if (targetSpecs) {
                 setTimeout(() => {
                     targetSpecs.style.display = 'block';
+                    // Trigger reflow
                     void targetSpecs.offsetWidth;
                     targetSpecs.classList.add('show');
                     
+                    // Animate individual fields
                     requiredFields.forEach((field, index) => {
                         setTimeout(() => {
                             const element = document.getElementById(field);
@@ -282,7 +372,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        
+        // Form validation
         (function() {
             'use strict';
             window.addEventListener('load', function() {

@@ -2,6 +2,7 @@
 session_start();
 require_once 'config/db.php';
 
+$conn = getConnection();
 $cartCount = 0;
 if (isset($_SESSION['user_id'])) {
     $userId = $_SESSION['user_id'];
@@ -13,15 +14,52 @@ if (isset($_SESSION['user_id'])) {
 ?>
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HA GROUP - Vente des pc à Marrakech</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">    <link rel="stylesheet" href="./assets/css/index.css?<?php echo time(); ?>">
-    <link rel="stylesheet" href="./assets/css/search-extension.css?<?php echo time(); ?>">
-    <script src="./assets/js/search-extension.js?<?php echo time(); ?>" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="./assets/css/index.css?<?php echo time(); ?>">
+    <link rel="stylesheet" href="./assets/css/search-hover.css?<?php echo time(); ?>">
+    <script src="./assets/js/search-hover.js?<?php echo time(); ?>" defer></script>
 </head>
-<body>
+
+<body> <!-- Floating Search Container -->
+    <div class="search-container">
+        <div class="floating-search-btn">
+            <i class="fas fa-search"></i>
+        </div>
+
+        <div class="search-side-panel">
+            <div class="search-panel-header">
+                <h3><i class="fas fa-search"></i> Recherche Rapide</h3>
+                <button class="close-search">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="search-panel-content">
+                <div class="search-input-wrapper">
+                    <input type="text" id="quickSearch" class="search-input" placeholder="Rechercher un produit...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+
+                <div class="category-filter">
+                    <h4>Catégorie</h4>
+                    <select id="quickSearchCategory">
+                        <option value="">Toutes les catégories</option>
+                        <option value="pc">Ordinateurs</option>
+                        <option value="mobile">Mobiles</option>
+                        <option value="accessory">Accessoires</option>
+                    </select>
+                </div>
+
+                <div class="search-results" id="searchResults"></div>
+            </div>
+        </div>
+    </div>
+
     <header class="header">
         <div class="header-top">
             <div class="logo-container">
@@ -57,9 +95,9 @@ if (isset($_SESSION['user_id'])) {
                 <button class="icon-btn">
                     <i class="fas fa-heart"></i>
                     <span class="badge">0</span>
-                    <span class="text">Favoris</span>
+                    <a href="wishlist.php"><span class="text">Favoris</span></a>
                 </button>
-                <a href="cart.php" class="icon-btn">
+                <a href="add_to_cart.php" class="icon-btn">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="badge"><?php echo $cartCount; ?></span>
                     <span class="text">Panier</span>
@@ -79,7 +117,8 @@ if (isset($_SESSION['user_id'])) {
         </nav>
     </header>
 
-    <section class="hero">        <div class="hero-sidebar">
+    <section class="hero">
+        <div class="hero-sidebar">
             <h3 class="sidebar-title">Catégories</h3>
             <ul class="category-list">
                 <?php
@@ -88,16 +127,16 @@ if (isset($_SESSION['user_id'])) {
                                 LEFT JOIN products p ON p.category_id = c.id 
                                 GROUP BY c.id 
                                 ORDER BY c.name";
-                $stmt = $conn->query($categoryQuery);
-                while ($category = $stmt->fetch(PDO::FETCH_ASSOC)):
-                ?>
-                <li>
-                    <a href="category.php?slug=<?php echo htmlspecialchars($category['slug']); ?>">
-                        <i class="<?php echo htmlspecialchars($category['icon']); ?>"></i>
-                        <?php echo htmlspecialchars($category['name']); ?> 
-                        <span class="cat-count"><?php echo (int)$category['product_count']; ?></span>
-                    </a>
-                </li>
+                                        $stmt = $conn->query($categoryQuery);
+                                        while ($category = $stmt->fetch(PDO::FETCH_ASSOC)):
+                                        ?>
+                    <li>
+                        <a href="category.php?slug=<?php echo htmlspecialchars($category['slug']); ?>">
+                            <i class="<?php echo htmlspecialchars($category['icon']); ?>"></i>
+                            <?php echo htmlspecialchars($category['name']); ?>
+                            <span class="cat-count"><?php echo (int)$category['product_count']; ?></span>
+                        </a>
+                    </li>
                 <?php endwhile; ?>
                 <li><a href="categories.php" class="view-all">Voir toutes les catégories <i class="fas fa-arrow-right"></i></a></li>
             </ul>
@@ -155,115 +194,111 @@ if (isset($_SESSION['user_id'])) {
         <h2>Nos Produits Populaires</h2>
         <div class="products-filter">
             <button class="filter-btn active" data-category="all">Tous</button>
-            <button class="filter-btn" data-category="laptop">Ordinateurs</button>
-            <button class="filter-btn" data-category="smartphone">Smartphones</button>
-            <button class="filter-btn" data-category="accessory">Accessoires</button>
+            <button class="filter-btn" data-category="laptops">Ordinateurs Portables</button>
+            <button class="filter-btn" data-category="desktops">Ordinateurs Fixes</button>
+            <button class="filter-btn" data-category="smartphones">Smartphones</button>
+            <button class="filter-btn" data-category="tablets">Tablettes</button>
+            <button class="filter-btn" data-category="keyboards">Claviers & Souris</button>
+            <button class="filter-btn" data-category="audio">Audio & Casques</button>
         </div>
-        <div class="products-grid">            <?php
-            $stmt = $conn->query("SELECT p.*, c.name as category_name FROM products p 
+        <div class="products-grid"> <?php
+                                    $conn = getConnection();
+                                    $stmt = $conn->query("SELECT p.*, c.name as category_name, c.slug as category_slug FROM products p 
                                 LEFT JOIN categories c ON p.category_id = c.id 
                                 ORDER BY p.created_at DESC");
-            while ($product = $stmt->fetch(PDO::FETCH_ASSOC)):
-            ?>
-            <div class="product-card" data-category="<?php echo htmlspecialchars($product['category']); ?>">
-                <div class="product-image-container">
-                    <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
-                         alt="<?php echo htmlspecialchars($product['name']); ?>" 
-                         class="product-image">
-                    <?php if ($product['stock'] < 5 && $product['stock'] > 0): ?>
-                        <span class="badge stock-badge">Plus que <?php echo $product['stock']; ?> en stock!</span>
-                    <?php endif; ?>
-                    <?php if (strtotime($product['created_at']) > strtotime('-7 days')): ?>
-                        <span class="badge new-badge">Nouveau</span>
-                    <?php endif; ?>
-                    <?php if (isset($product['discount']) && $product['discount'] > 0): ?>
-                        <span class="badge discount-badge">-<?php echo $product['discount']; ?>%</span>
-                    <?php endif; ?>
-                </div>
-                  <div class="product-info">
-                    <span class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></span>
-                    <h3 class="product-title"><?php echo htmlspecialchars($product['name']); ?></h3>
-                    
-                    <?php if ($product['category'] === 'pc' || $product['category'] === 'laptop'): ?>
-                    <div class="product-specs">
-                        <?php if ($product['ram']): ?>
-                            <span><i class="fas fa-memory" title="RAM"></i> <?php echo htmlspecialchars($product['ram']); ?></span>
+                                    while ($product = $stmt->fetch(PDO::FETCH_ASSOC)):
+                                    ?>
+                <div class="product-card" data-category="<?php echo htmlspecialchars($product['category_slug']); ?>">
+                    <div class="product-image-container">
+                        <img src="<?php echo htmlspecialchars($product['image_url']); ?>"
+                            alt="<?php echo htmlspecialchars($product['name']); ?>"
+                            class="product-image">
+                        <?php if ($product['stock'] < 5 && $product['stock'] > 0): ?>
+                            <span class="badge stock-badge">Plus que <?php echo $product['stock']; ?> en stock!</span>
                         <?php endif; ?>
-                        <?php if ($product['storage']): ?>
-                            <span><i class="fas fa-hdd" title="Storage"></i> <?php echo htmlspecialchars($product['storage']); ?></span>
+                        <?php if (strtotime($product['created_at']) > strtotime('-7 days')): ?>
+                            <span class="badge new-badge">Nouveau</span>
                         <?php endif; ?>
-                        <?php if ($product['processor']): ?>
-                            <span><i class="fas fa-microchip" title="Processor"></i> <?php echo htmlspecialchars($product['processor']); ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <?php elseif ($product['category'] === 'mobile' || $product['category'] === 'smartphone'): ?>
-                    <div class="product-specs">
-                        <?php if ($product['storage']): ?>
-                            <span><i class="fas fa-hdd" title="Storage"></i> <?php echo htmlspecialchars($product['storage']); ?></span>
-                        <?php endif; ?>
-                        <?php if ($product['camera']): ?>
-                            <span><i class="fas fa-camera" title="Camera"></i> <?php echo htmlspecialchars($product['camera']); ?></span>
-                        <?php endif; ?>
-                        <?php if ($product['battery']): ?>
-                            <span><i class="fas fa-battery-full" title="Battery"></i> <?php echo htmlspecialchars($product['battery']); ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <?php endif; ?>
-
-                    <div class="product-description">
-                        <p><?php echo htmlspecialchars($product['description']); ?></p>
-                    </div>
-
-                    <div class="product-stats">
-                        <div class="stat">
-                            <i class="fas fa-star star-rating"></i>
-                            <i class="fas fa-star star-rating"></i>
-                            <i class="fas fa-star star-rating"></i>
-                            <i class="fas fa-star star-rating"></i>
-                            <i class="fas fa-star-half-alt star-rating"></i>
-                            <span>(4.5)</span>
-                        </div>
-                        <div class="stat">
-                            <i class="fas fa-shopping-cart"></i>
-                            <?php echo rand(50, 200); ?> vendus
-                        </div>
-                    </div>
-                    
-                    <div class="product-price-container">
                         <?php if (isset($product['discount']) && $product['discount'] > 0): ?>
-                            <div class="original-price"><?php echo number_format($product['price'], 2); ?> DH</div>
-                            <div class="discounted-price">
-                                <?php echo number_format($product['price'] * (1 - $product['discount']/100), 2); ?> DH
-                            </div>
-                        <?php else: ?>
-                            <div class="product-price"><?php echo number_format($product['price'], 2); ?> DH</div>
+                            <span class="badge discount-badge">-<?php echo $product['discount']; ?>%</span>
                         <?php endif; ?>
                     </div>
-                </div>
+                    <div class="product-info">
+                        <span class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></span>
+                        <h3 class="product-title"><?php echo htmlspecialchars($product['name']); ?></h3>
 
-                <div class="product-actions">
-                    <div class="action-buttons">
-                        <?php if ($product['stock'] > 0): ?>
+                        <?php if ($product['category_slug'] === 'laptops' || $product['category_slug'] === 'desktops'): ?>
+                            <div class="product-specs">
+                                <?php if ($product['ram']): ?>
+                                    <span><i class="fas fa-memory" title="RAM"></i> <?php echo htmlspecialchars($product['ram']); ?></span>
+                                <?php endif; ?>
+                                <?php if ($product['storage']): ?>
+                                    <span><i class="fas fa-hdd" title="Storage"></i> <?php echo htmlspecialchars($product['storage']); ?></span>
+                                <?php endif; ?>
+                                <?php if ($product['processor']): ?>
+                                    <span><i class="fas fa-microchip" title="Processor"></i> <?php echo htmlspecialchars($product['processor']); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php elseif ($product['category_slug'] === 'smartphones' || $product['category_slug'] === 'tablets'): ?>
+                            <div class="product-specs">
+                                <?php if ($product['storage']): ?>
+                                    <span><i class="fas fa-hdd" title="Storage"></i> <?php echo htmlspecialchars($product['storage']); ?></span>
+                                <?php endif; ?>
+                                <?php if ($product['camera']): ?>
+                                    <span><i class="fas fa-camera" title="Camera"></i> <?php echo htmlspecialchars($product['camera']); ?></span>
+                                <?php endif; ?>
+                                <?php if ($product['battery']): ?>
+                                    <span><i class="fas fa-battery-full" title="Battery"></i> <?php echo htmlspecialchars($product['battery']); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="product-description">
+                            <p><?php echo htmlspecialchars($product['description']); ?></p>
+                        </div>
+
+                        <div class="product-stats">
+                            <div class="stat">
+                                <i class="fas fa-star star-rating"></i>
+                                <i class="fas fa-star star-rating"></i>
+                                <i class="fas fa-star star-rating"></i>
+                                <i class="fas fa-star star-rating"></i>
+                                <i class="fas fa-star-half-alt star-rating"></i>
+                                <span>(4.5)</span>
+                            </div>
+                            <div class="stat">
+                                <i class="fas fa-shopping-cart"></i>
+                                <?php echo rand(50, 200); ?> vendus
+                            </div>
+                        </div>
+
+                        <div class="product-price-container">
+                            <?php if (isset($product['discount']) && $product['discount'] > 0): ?>
+                                <div class="original-price"><?php echo number_format($product['price'], 2); ?> DH</div>
+                                <div class="discounted-price">
+                                    <?php echo number_format($product['price'] * (1 - $product['discount'] / 100), 2); ?> DH
+                                </div>
+                            <?php else: ?>
+                                <div class="product-price"><?php echo number_format($product['price'], 2); ?> DH</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="product-actions">
+                        <div class="action-buttons">
+
                             <button class="product-button add-to-cart" onclick="addToCart(<?php echo $product['id']; ?>)">
                                 <i class="fas fa-shopping-cart"></i> Ajouter au panier
                             </button>
                             <button class="product-button add-to-wishlist" onclick="addToWishlist(<?php echo $product['id']; ?>)">
                                 <i class="fas fa-heart"></i>
                             </button>
-                        <?php else: ?>
-                            <button class="product-button out-of-stock" disabled>
-                                <i class="fas fa-times"></i> Rupture de stock
-                            </button>
-                            <button class="product-button notify-stock">
-                                <i class="fas fa-bell"></i> Notifier disponibilité
-                            </button>
-                        <?php endif; ?>
+                        </div>
+                        <a href="product_details.php?id=<?php echo $product['id']; ?>" class="product-button view-details">
+                            <i class="fas fa-eye"></i> Voir détails
+                        </a>
                     </div>
-                    <a href="product_details.php?id=<?php echo $product['id']; ?>" class="product-button view-details">
-                        <i class="fas fa-eye"></i> Voir détails
-                    </a>
                 </div>
-            </div>
             <?php endwhile; ?>
         </div>
     </section>
@@ -395,74 +430,75 @@ if (isset($_SESSION['user_id'])) {
     </section>
 
     <footer class="footer">
-    <div class="footer-wave"></div>
-    <div class="footer-container">
-        <div class="footer-grid">
-            <div class="footer-links">
-                <h3>About Us</h3>
-                <p style="color: #ecf0f1; line-height: 1.6;">We provide high-quality electronics and accessories to enhance your digital lifestyle. Trust us for the latest tech solutions.</p>
-                <div class="social-links">
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+        <div class="footer-wave"></div>
+        <div class="footer-container">
+            <div class="footer-grid">
+                <div class="footer-links">
+                    <h3>About Us</h3>
+                    <p style="color: #ecf0f1; line-height: 1.6;">We provide high-quality electronics and accessories to enhance your digital lifestyle. Trust us for the latest tech solutions.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+
+                <div class="footer-links">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Home</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Products</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>About Us</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Contact</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Privacy Policy</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-links">
+                    <h3>Our Services</h3>
+                    <ul>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Phones & Tablets</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Laptops</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Accessories</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Repair Services</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Support</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-links">
+                    <h3>Contact Info</h3>
+                    <ul class="contact-info">
+                        <li><i class="fas fa-map-marker-alt"></i>123 Tech Street, Digital City</li>
+                        <li><i class="fas fa-phone"></i>+1 234 567 8900</li>
+                        <li><i class="fas fa-envelope"></i>info@techstore.com</li>
+                        <li><i class="fas fa-clock"></i>Mon - Sat: 9:00 AM - 8:00 PM</li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="footer-links">
-                <h3>Quick Links</h3>
-                <ul>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Home</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Products</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>About Us</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Contact</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Privacy Policy</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-links">
-                <h3>Our Services</h3>
-                <ul>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Phones & Tablets</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Laptops</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Accessories</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Repair Services</a></li>
-                    <li><a href="#"><i class="fas fa-chevron-right"></i>Support</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-links">
-                <h3>Contact Info</h3>
-                <ul class="contact-info">
-                    <li><i class="fas fa-map-marker-alt"></i>123 Tech Street, Digital City</li>
-                    <li><i class="fas fa-phone"></i>+1 234 567 8900</li>
-                    <li><i class="fas fa-envelope"></i>info@techstore.com</li>
-                    <li><i class="fas fa-clock"></i>Mon - Sat: 9:00 AM - 8:00 PM</li>
-                </ul>
+            <div class="footer-bottom">
+                <div class="copyright">
+                    © 2025 Tech Store. All rights reserved.
+                </div>
+                <div class="payment-methods">
+                    <i class="fab fa-cc-visa"></i>
+                    <i class="fab fa-cc-mastercard"></i>
+                    <i class="fab fa-cc-paypal"></i>
+                    <i class="fab fa-cc-apple-pay"></i>
+                </div>
             </div>
         </div>
-
-        <div class="footer-bottom">
-            <div class="copyright">
-                © 2025 Tech Store. All rights reserved.
-            </div>
-            <div class="payment-methods">
-                <i class="fab fa-cc-visa"></i>
-                <i class="fab fa-cc-mastercard"></i>
-                <i class="fab fa-cc-paypal"></i>
-                <i class="fab fa-cc-apple-pay"></i>
-            </div>
-        </div>
-    </div>
-</footer>
+    </footer>
 
     <a href="https://wa.me/212500000000" class="whatsapp-button">
         <i class="fab fa-whatsapp"></i>
-    </a>    <script>
+    </a>
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             const userMenuBtn = document.getElementById('userMenuBtn');
             const userDropdown = document.getElementById('userDropdown');
-            
+
             if (userMenuBtn && userDropdown) {
                 userMenuBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -681,4 +717,5 @@ if (isset($_SESSION['user_id'])) {
         });
     </script>
 </body>
+
 </html>
