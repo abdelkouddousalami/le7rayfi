@@ -2,13 +2,10 @@
 session_start();
 require_once 'config/db.php';
 
-// Get product ID from URL
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Get database connection
 $conn = getConnection();
 
-// Fetch product details
 $stmt = $conn->prepare("
     SELECT p.*, c.name as category_name, c.slug as category_slug 
     FROM products p 
@@ -18,13 +15,11 @@ $stmt = $conn->prepare("
 $stmt->execute([$product_id]);
 $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// If product not found, redirect to home
 if (!$product) {
     header('Location: index.php');
     exit();
 }
 
-// Get related products from same category
 $stmt = $conn->prepare("
     SELECT * FROM products 
     WHERE category_id = ? AND id != ? 
@@ -238,7 +233,6 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             return parseInt(document.getElementById('quantity').value) || 1;
         }
 
-        // Enhanced addToCart function
         async function addToCart(productId, quantity) {
             try {
                 const response = await fetch('add_to_cart.php', {
@@ -252,17 +246,14 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Update cart count
                     const cartBadge = document.querySelector('.badge');
                     if (cartBadge) {
                         cartBadge.textContent = data.cartCount;
                         cartBadge.style.display = data.cartCount > 0 ? 'block' : 'none';
                     }
                     
-                    // Show success notification
                     showNotification('success', data.message);
                 } else {
-                    // Show error notification
                     showNotification('error', data.message);
                 }
             } catch (error) {
@@ -280,7 +271,6 @@ $related_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             `;
             document.body.appendChild(notification);
 
-            // Remove notification after 3 seconds
             setTimeout(() => {
                 notification.remove();
             }, 3000);

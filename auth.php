@@ -42,37 +42,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $errors = [];
             
-            // Validate required fields
             if (empty($username)) $errors[] = "Username is required";
             if (empty($email)) $errors[] = "Email is required";
             if (empty($password)) $errors[] = "Password is required";
             if (empty($full_name)) $errors[] = "Full name is required";
             
-            // Validate username format
             if (!preg_match('/^[a-zA-Z0-9_]{3,50}$/', $username)) {
                 $errors[] = "Username must be between 3-50 characters and can only contain letters, numbers, and underscores";
             }
             
-            // Validate email format
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $errors[] = "Invalid email format";
             }
             
-            // Check existing username
             $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
             $stmt->execute([$username]);
             if ($stmt->rowCount() > 0) {
                 $errors[] = "Username already taken";
             }
             
-            // Check existing email
             $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
             $stmt->execute([$email]);
             if ($stmt->rowCount() > 0) {
                 $errors[] = "Email already in use";
             }
             
-            // Validate password
             if (strlen($password) < 8) {
                 $errors[] = "Password must be at least 8 characters long";
             }
@@ -283,7 +277,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             background: #fff;
         }
 
-        /* Specific form layouts */
         .login-form {
             max-width: 400px;
             margin: 0 auto;
@@ -300,7 +293,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             margin-bottom: 1rem;
         }
 
-        /* Error and success messages */
         .error-message, .success-message {
             width: 100%;
             box-sizing: border-box;
@@ -323,7 +315,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-left: 4px solid #2ecc71;
         }
 
-        /* Submit button styling */
         .submit-btn {
             background: #3498db;
             color: white;
@@ -350,7 +341,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
         }
 
-        /* Side content and switch button */
         .side-content {
             width: 40%;
             background: linear-gradient(135deg, #3498db, #2c3e50);
@@ -385,7 +375,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-sizing: border-box;
         }
 
-        /* Mobile responsiveness */
         @media (max-width: 768px) {
             .auth-container {
                 width: 95%;
@@ -643,7 +632,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
-        // Password confirmation validation
         document.getElementById('password')?.addEventListener('input', function() {
             var confirmPassword = document.getElementById('confirm_password');
             if (confirmPassword && this.value !== confirmPassword.value) {

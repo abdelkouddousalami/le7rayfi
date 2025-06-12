@@ -13,7 +13,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* Enhanced Header and Navbar */
     
         .header {
             position: fixed;
@@ -117,7 +116,6 @@
             transform: scale(1.1);
         }
 
-        /* Modern Navigation */
         .nav-bar {
             padding: 0 5%;
             background: transparent;
@@ -205,7 +203,6 @@
             display: none;
         }
 
-        /* Enhanced Hero Section */
         .hero {
             margin-top: var(--header-height);
             min-height: 600px;
@@ -214,7 +211,6 @@
             overflow: hidden;
         }
 
-        /* Enhanced Hero Sidebar Styles */
         .hero-sidebar {
             width: 300px;
             background: white;
@@ -452,7 +448,6 @@
             }
         }
 
-        /* Products Section Refinements */
         .products-section {
             padding: 4rem 5%;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -506,11 +501,11 @@
 
         .products-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Changed from auto-fill to exactly 3 columns */
-            gap: 1.5rem; /* Reduced gap from 2rem */
-            padding: 1.5rem; /* Reduced padding */
-            max-width: 1400px; /* Added max-width to ensure consistent layout */
-            margin: 0 auto; /* Center the grid */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         .product-card {
@@ -583,7 +578,6 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            gap: 15px;
         }
 
         .product-category {
@@ -738,7 +732,6 @@
             }
         }
 
-        /* Enhanced Products Section Styles */
         .products-section {
             padding: 4rem 5%;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -829,7 +822,6 @@
             gap: 1rem;
         }
 
-        /* Best Sellers Section */
         .best-sellers {
             margin-top: 4rem;
             padding-top: 4rem;
@@ -944,7 +936,6 @@
             transform: translateY(-2px);
         }
 
-        /* Enhanced Best Sellers Section */
         .best-sellers {
             margin-top: 4rem;
             padding: 4rem 5%;
@@ -1180,7 +1171,6 @@
             transform: translateY(-2px);
         }
 
-        /* Enhanced Footer Styles */
         .footer {
             background: linear-gradient(135deg, #1a1c20 0%, #2d3436 100%);
             color: white;
@@ -1419,7 +1409,6 @@
             }
         }
 
-        /* WhatsApp Button Adjustment */
         .whatsapp-button {
             position: fixed;
             bottom: 2rem;
@@ -1437,7 +1426,6 @@
             z-index: 1000;
         }
 
-        /* Responsive Design Updates */
         @media (max-width: 1024px) {
             .nav-list {
                 display: none;
@@ -1522,7 +1510,6 @@
             }
         }
 
-        /* Footer Styles */
         .footer {
             position: relative;
             background: #2c3e50;
@@ -1672,7 +1659,6 @@
             }
         }
 
-        /* User Menu Styles */
         .user-menu {
             position: relative;
             display: inline-block;
@@ -1714,13 +1700,11 @@
             text-align: center;
         }
 
-        /* Cart Link Enhancement */
         a.icon-btn {
             text-decoration: none;
             color: inherit;
         }
 
-        /* Filter Aside Styles */
         .filter-aside {
             position: fixed;
             right: -320px;
@@ -1804,7 +1788,6 @@
             color: #666;
         }
 
-        /* Active Filters */
         .active-filters {
             display: flex;
             flex-wrap: wrap;
@@ -1838,7 +1821,6 @@
             color: #dc3545;
         }
 
-        /* Loading and error states */
         .loading,
         .error {
             grid-column: 1 / -1;
@@ -1864,7 +1846,6 @@
             margin-bottom: 10px;
         }
 
-        /* Error State */
         .error {
             text-align: center;
             padding: 40px;
@@ -1879,7 +1860,6 @@
             margin-bottom: 10px;
         }
 
-        /* No Products State */
         .no-products {
             text-align: center;
             padding: 40px;
@@ -1899,7 +1879,6 @@
             font-size: 1.1em;
         }
 
-        /* Reset Button */
         .filter-reset {
             display: flex;
             align-items: center;

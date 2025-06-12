@@ -2,32 +2,31 @@
 session_start();
 require_once '../config/db.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../login.php');
     exit();
 }
 
-// Fetch statistics
 $conn = getConnection();
 
-// Total products
 $stmt = $conn->query("SELECT COUNT(*) as total_products FROM products");
 $totalProducts = $stmt->fetch(PDO::FETCH_ASSOC)['total_products'];
 
-// Total users
 $stmt = $conn->query("SELECT COUNT(*) as total_users FROM users WHERE role = 'user'");
 $totalUsers = $stmt->fetch(PDO::FETCH_ASSOC)['total_users'];
 
-// Total orders
 $stmt = $conn->query("SELECT COUNT(*) as total_orders FROM orders");
 $totalOrders = $stmt->fetch(PDO::FETCH_ASSOC)['total_orders'];
 
-// Revenue
+$stmt = $conn->query("SELECT COUNT(*) as total_messages FROM contact_messages");
+$totalMessages = $stmt->fetch(PDO::FETCH_ASSOC)['total_messages'];
+
+$stmt = $conn->query("SELECT COUNT(*) as unread_messages FROM contact_messages WHERE status = 'unread'");
+$unreadMessages = $stmt->fetch(PDO::FETCH_ASSOC)['unread_messages'];
+
 $stmt = $conn->query("SELECT SUM(total_amount) as total_revenue FROM orders WHERE status = 'completed'");
 $totalRevenue = $stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'] ?? 0;
 
-// Get monthly sales data for chart
 $stmt = $conn->query("SELECT DATE_FORMAT(created_at, '%Y-%m') as month, SUM(total_amount) as revenue 
                      FROM orders 
                      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
@@ -56,7 +55,6 @@ foreach ($monthlyData as $data) {
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <nav class="col-md-2 d-none d-md-block sidebar">
                 <div class="sidebar-brand">
                     <i class="fas fa-laptop me-2"></i> HA GROUP
@@ -89,6 +87,14 @@ foreach ($monthlyData as $data) {
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="messages.php">
+                                <i class="fas fa-envelope"></i> Messages
+                                <?php if ($unreadMessages > 0): ?>
+                                <span class="badge bg-danger rounded-pill ms-2"><?php echo $unreadMessages; ?></span>
+                                <?php endif; ?>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="../index.php">
                                 <i class="fas fa-store"></i> View Store
                             </a>
@@ -102,7 +108,6 @@ foreach ($monthlyData as $data) {
                 </div>
             </nav>
 
-            <!-- Main content -->
             <main class="col-md-10 ms-sm-auto px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4">
                     <div>
@@ -123,20 +128,37 @@ foreach ($monthlyData as $data) {
                             This week
                         </button>
                     </div>
-                </div>
-
-                <!-- Stats cards -->
-                <div class="row">
+                </div>                <div class="row">
                     <div class="col-xl-3 col-md-6 mb-4">
                         <div class="card data-card primary stats-card h-100">
                             <div class="card-body">
                                 <div class="stats-label text-primary">Products</div>
                                 <div class="stats-amount"><?php echo $totalProducts; ?></div>
                                 <div class="text-muted small mt-2">
-                                    <i class="fas fa-arrow-up text-success"></i> 
-                                    <span>12% since last month</span>
+                                    <i class="fas fa-box"></i> 
+                                    <span>Total Products</span>
                                 </div>
                                 <i class="fas fa-box stats-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card data-card warning stats-card h-100">
+                            <div class="card-body">
+                                <div class="stats-label text-warning">Messages</div>
+                                <div class="stats-amount">
+                                    <?php echo $totalMessages; ?>
+                                    <?php if ($unreadMessages > 0): ?>
+                                    <span class="badge bg-danger rounded-pill ms-2" style="font-size: 0.5em;">
+                                        <?php echo $unreadMessages; ?> unread
+                                    </span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="text-muted small mt-2">
+                                    <i class="fas fa-envelope"></i>
+                                    <span><?php echo $unreadMessages; ?> unread messages</span>
+                                </div>
+                                <i class="fas fa-envelope stats-icon"></i>
                             </div>
                         </div>
                     </div>
@@ -154,15 +176,22 @@ foreach ($monthlyData as $data) {
                         </div>
                     </div>
                     <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card data-card info stats-card h-100">
+                        <div class="card data-card warning stats-card h-100">
                             <div class="card-body">
-                                <div class="stats-label text-info">Orders</div>
-                                <div class="stats-amount"><?php echo $totalOrders; ?></div>
-                                <div class="text-muted small mt-2">
-                                    <i class="fas fa-arrow-up text-success"></i>
-                                    <span>5% since last week</span>
+                                <div class="stats-label text-warning">Messages</div>
+                                <div class="stats-amount">
+                                    <?php echo $totalMessages; ?>
+                                    <?php if ($unreadMessages > 0): ?>
+                                    <span class="badge bg-danger rounded-pill ms-2" style="font-size: 0.5em;">
+                                        <?php echo $unreadMessages; ?> unread
+                                    </span>
+                                    <?php endif; ?>
                                 </div>
-                                <i class="fas fa-shopping-cart stats-icon"></i>
+                                <div class="text-muted small mt-2">
+                                    <i class="fas fa-envelope"></i>
+                                    <span><?php echo $unreadMessages; ?> unread messages</span>
+                                </div>
+                                <i class="fas fa-envelope stats-icon"></i>
                             </div>
                         </div>
                     </div>
@@ -181,7 +210,6 @@ foreach ($monthlyData as $data) {
                     </div>
                 </div>
 
-                <!-- Charts -->
                 <div class="row">
                     <div class="col-xl-8 col-lg-7">
                         <div class="card shadow mb-4">
@@ -230,7 +258,6 @@ foreach ($monthlyData as $data) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>    <script>
-        // Monthly Revenue Chart
         const revenueCtx = document.getElementById('revenueChart').getContext('2d');
         const gradient = revenueCtx.createLinearGradient(0, 0, 0, 400);
         gradient.addColorStop(0, 'rgba(78, 115, 223, 0.3)');
@@ -306,7 +333,6 @@ foreach ($monthlyData as $data) {
             }
         });
 
-        // Category Distribution Chart
         const categoryCtx = document.getElementById('categoryChart').getContext('2d');
         new Chart(categoryCtx, {
             type: 'doughnut',

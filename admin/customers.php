@@ -2,7 +2,6 @@
 session_start();
 require_once '../config/db.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../login.php');
     exit();
@@ -10,7 +9,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 $conn = getConnection();
 
-// Handle user status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['action'])) {
     switch ($_POST['action']) {
         case 'delete':
@@ -27,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_id'], $_POST['ac
     exit();
 }
 
-// Fetch all users
 $stmt = $conn->query("
     SELECT u.*, 
            COUNT(DISTINCT o.id) as total_orders,
@@ -55,7 +52,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <nav class="col-md-2 d-none d-md-block sidebar">
                 <div class="sidebar-brand">
                     <i class="fas fa-laptop me-2"></i> HA GROUP
@@ -101,7 +97,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </nav>
 
-            <!-- Main content -->
             <main class="col-md-10 ms-sm-auto px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
                     <h1 class="h2">Manage Customers</h1>
@@ -190,7 +185,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Customer Details Modal -->
     <div class="modal fade" id="customerDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -207,7 +201,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Customer search functionality
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const searchText = e.target.value.toLowerCase();
             const rows = document.querySelectorAll('tbody tr');
@@ -222,7 +215,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const modal = new bootstrap.Modal(document.getElementById('customerDetailsModal'));
             modal.show();
             
-            // Fetch customer details
             fetch(`get_customer_details.php?id=${userId}`)
                 .then(response => response.json())
                 .then(data => {

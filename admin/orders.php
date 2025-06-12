@@ -2,7 +2,6 @@
 session_start();
 require_once '../config/db.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../login.php');
     exit();
@@ -10,7 +9,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 $conn = getConnection();
 
-// Handle order status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id'], $_POST['status'])) {
     $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
     $stmt->execute([$_POST['status'], $_POST['order_id']]);
@@ -18,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id'], $_POST['s
     exit();
 }
 
-// Fetch all orders with customer details
 $stmt = $conn->query("SELECT o.*, u.username, u.email, u.full_name 
                       FROM orders o 
                       LEFT JOIN users u ON o.user_id = u.id 
@@ -40,7 +37,6 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <nav class="col-md-2 d-none d-md-block sidebar">
                 <div class="sidebar-brand">
                     <i class="fas fa-laptop me-2"></i> HA GROUP
@@ -86,7 +82,6 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </nav>
 
-            <!-- Main content -->
             <main class="col-md-10 ms-sm-auto px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
                     <h1 class="h2">Manage Orders</h1>
@@ -172,7 +167,6 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Order Details Modal -->
     <div class="modal fade" id="orderDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -193,7 +187,6 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
             modal.show();
             
-            // Fetch order details
             fetch(`get_order_details.php?id=${orderId}`)
                 .then(response => response.json())
                 .then(data => {

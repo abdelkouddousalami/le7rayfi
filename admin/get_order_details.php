@@ -2,7 +2,6 @@
 session_start();
 require_once '../config/db.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     http_response_code(403);
     exit(json_encode(['error' => 'Unauthorized']));
@@ -16,7 +15,6 @@ if (!isset($_GET['id'])) {
 $conn = getConnection();
 
 try {
-    // Get order details with customer information
     $stmt = $conn->prepare("
         SELECT o.*, u.username, u.email, u.full_name, u.phone
         FROM orders o
@@ -31,7 +29,6 @@ try {
         exit(json_encode(['error' => 'Order not found']));
     }
 
-    // Get order items with product details
     $stmt = $conn->prepare("
         SELECT oi.*, p.name, p.image_url
         FROM order_items oi

@@ -1,8 +1,6 @@
 <?php
-// filepath: config/setup_categories.php
 require_once 'db.php';
 
-// Create categories table if it doesn't exist
 $createCategoriesTable = "CREATE TABLE IF NOT EXISTS categories (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
@@ -13,16 +11,13 @@ $createCategoriesTable = "CREATE TABLE IF NOT EXISTS categories (
 
 $conn->exec($createCategoriesTable);
 
-// Add category_id to products table if it doesn't exist
 $addCategoryColumn = "ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id INT,
                      ADD CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES categories(id)";
 try {
     $conn->exec($addCategoryColumn);
 } catch (PDOException $e) {
-    // Column might already exist
 }
 
-// Sample categories data
 $categories = [
     ['name' => 'Ordinateurs Portables', 'icon' => 'fas fa-laptop', 'slug' => 'laptops'],
     ['name' => 'Ordinateurs Fixes', 'icon' => 'fas fa-desktop', 'slug' => 'desktops'],
@@ -36,7 +31,6 @@ $categories = [
     ['name' => 'Sécurité', 'icon' => 'fas fa-shield-alt', 'slug' => 'security']
 ];
 
-// Insert categories
 $stmt = $conn->prepare("INSERT IGNORE INTO categories (name, icon, slug) VALUES (?, ?, ?)");
 foreach ($categories as $category) {
     $stmt->execute([$category['name'], $category['icon'], $category['slug']]);

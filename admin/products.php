@@ -2,7 +2,6 @@
 session_start();
 require_once '../config/db.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../login.php');
     exit();
@@ -10,7 +9,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 $conn = getConnection();
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
@@ -26,8 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $camera = $_POST['camera'] ?? null;
                 $battery = $_POST['battery'] ?? null;
                 $discount = $_POST['discount'];
+                $screen_size = $_POST['screen_size'] ?? null;
+                $os = $_POST['os'] ?? null;
+                $color = $_POST['color'] ?? null;
+                $network = $_POST['network'] ?? null;
+                $graphics_card = $_POST['graphics_card'] ?? null;
+                $brand = $_POST['brand'] ?? null;
+                $model = $_POST['model'] ?? null;
 
-                // Handle image upload
                 $image_url = '';
                 if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
                     $upload_dir = '../uploads/products/';
@@ -40,13 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // Insert product into database
                 try {
                     $stmt = $conn->prepare("INSERT INTO products (name, description, price, stock, category_id, image_url, 
-                                        storage, ram, processor, camera, battery, discount) 
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                                                        storage, ram, processor, camera, battery, screen_size, os, color, network, graphics_card, brand, model, discount) 
+                                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt->execute([$name, $description, $price, $stock, $category, $image_url, 
-                                $storage, $ram, $processor, $camera, $battery, $discount]);
+                                                $storage, $ram, $processor, $camera, $battery, $screen_size, 
+                                                $os, $color, $network, $graphics_card, $brand, $model, $discount]);
                     
                     $_SESSION['success_message'] = "Product added successfully!";
                 } catch (PDOException $e) {
@@ -67,6 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $camera = $_POST['camera'] ?? null;
                 $battery = $_POST['battery'] ?? null;
                 $discount = $_POST['discount'];
+                $screen_size = $_POST['screen_size'] ?? null;
+                $os = $_POST['os'] ?? null;
+                $color = $_POST['color'] ?? null;
+                $network = $_POST['network'] ?? null;
+                $graphics_card = $_POST['graphics_card'] ?? null;
+                $brand = $_POST['brand'] ?? null;
+                $model = $_POST['model'] ?? null;
 
                 $update_fields = [
                     'name' => $name,
@@ -79,6 +90,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'processor' => $processor,
                     'camera' => $camera,
                     'battery' => $battery,
+                    'screen_size' => $_POST['screen_size'] ?? null,
+                    'os' => $_POST['os'] ?? null,
+                    'color' => $_POST['color'] ?? null,
+                    'network' => $_POST['network'] ?? null,
+                    'graphics_card' => $_POST['graphics_card'] ?? null,
+                    'brand' => $_POST['brand'] ?? null,
+                    'model' => $_POST['model'] ?? null,
                     'discount' => $discount
                 ];
 
@@ -119,11 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch categories for the dropdown
 $stmt = $conn->query("SELECT * FROM categories ORDER BY name");
 $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch existing products
 $stmt = $conn->query("SELECT p.*, c.name as category_name 
                      FROM products p 
                      LEFT JOIN categories c ON p.category_id = c.id 
@@ -144,7 +160,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <nav class="col-md-2 d-none d-md-block sidebar">
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
@@ -172,7 +187,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </nav>
 
-            <!-- Main content -->
             <main class="col-md-10 ms-sm-auto px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1>Manage Products</h1>
@@ -199,7 +213,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 <?php endif; ?>
 
-                <!-- Products Table -->
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead>
@@ -247,7 +260,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -290,30 +302,69 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Storage</label>
-                                <input type="text" class="form-control" name="storage">
+                            <div class="col-md-6 mb-3" data-field="brand">
+                                <label class="form-label">Marque</label>
+                                <input type="text" class="form-control" name="brand" placeholder="ex: Apple, Samsung, Toshiba, MSI...">
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 mb-3" data-field="model">
+                                <label class="form-label">Modèle</label>
+                                <input type="text" class="form-control" name="model" placeholder="ex: MacBook Pro M2, Galaxy S24...">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3 spec-field" data-field="ram" style="display: none;">
                                 <label class="form-label">RAM</label>
-                                <input type="text" class="form-control" name="ram">
+                                <input type="text" class="form-control" name="ram" placeholder="ex: 8GB, 16GB, 32GB...">
+                            </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="storage" style="display: none;">
+                                <label class="form-label">Stockage</label>
+                                <input type="text" class="form-control" name="storage" placeholder="ex: 512GB SSD, 1TB HDD...">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Processor</label>
-                                <input type="text" class="form-control" name="processor">
+                            <div class="col-md-6 mb-3 spec-field" data-field="processor" style="display: none;">
+                                <label class="form-label">Processeur</label>
+                                <input type="text" class="form-control" name="processor" placeholder="ex: Intel i7-12700H, AMD Ryzen 7...">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Camera</label>
-                                <input type="text" class="form-control" name="camera">
+                            <div class="col-md-6 mb-3 spec-field" data-field="graphics_card" style="display: none;">
+                                <label class="form-label">Carte Graphique</label>
+                                <input type="text" class="form-control" name="graphics_card" placeholder="ex: NVIDIA RTX 4060, Intégrée...">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3 spec-field" data-field="camera" style="display: none;">
+                                <label class="form-label">Appareil Photo</label>
+                                <input type="text" class="form-control" name="camera" placeholder="ex: 50MP, Triple 50MP+12MP+8MP...">
+                            </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="battery" style="display: none;">
+                                <label class="form-label">Batterie</label>
+                                <input type="text" class="form-control" name="battery" placeholder="ex: 5000mAh, 4500mAh...">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3 spec-field" data-field="screen_size" style="display: none;">
+                                <label class="form-label">Taille Écran</label>
+                                <input type="text" class="form-control" name="screen_size" placeholder="ex: 6.1 pouces, 15.6 pouces...">
+                            </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="os" style="display: none;">
+                                <label class="form-label">Système d'exploitation</label>
+                                <input type="text" class="form-control" name="os" placeholder="ex: Windows 11, iOS 17, Android 14...">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Battery</label>
-                                <input type="text" class="form-control" name="battery">
+                            <div class="col-md-6 mb-3 spec-field" data-field="color" style="display: none;">
+                                <label class="form-label">Couleur</label>
+                                <input type="text" class="form-control" name="color" placeholder="ex: Noir, Blanc, Bleu Océan...">
                             </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="network" style="display: none;">
+                                <label class="form-label">Réseau</label>
+                                <input type="text" class="form-control" name="network" placeholder="ex: 5G, 4G, WiFi seulement...">
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Discount (%)</label>
                                 <input type="number" class="form-control" name="discount" value="0" min="0" max="100">
@@ -333,7 +384,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Edit Product Modal -->
     <div class="modal fade" id="editProductModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -377,30 +427,69 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Storage</label>
-                                <input type="text" class="form-control" name="storage" id="edit_storage">
+                            <div class="col-md-6 mb-3" data-field="brand">
+                                <label class="form-label">Marque</label>
+                                <input type="text" class="form-control" name="brand" id="edit_brand" placeholder="ex: Apple, Samsung, Toshiba, MSI...">
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 mb-3" data-field="model">
+                                <label class="form-label">Modèle</label>
+                                <input type="text" class="form-control" name="model" id="edit_model" placeholder="ex: MacBook Pro M2, Galaxy S24...">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3 spec-field" data-field="ram" style="display: none;">
                                 <label class="form-label">RAM</label>
-                                <input type="text" class="form-control" name="ram" id="edit_ram">
+                                <input type="text" class="form-control" name="ram" id="edit_ram" placeholder="ex: 8GB, 16GB, 32GB...">
+                            </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="storage" style="display: none;">
+                                <label class="form-label">Stockage</label>
+                                <input type="text" class="form-control" name="storage" id="edit_storage" placeholder="ex: 512GB SSD, 1TB HDD...">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Processor</label>
-                                <input type="text" class="form-control" name="processor" id="edit_processor">
+                            <div class="col-md-6 mb-3 spec-field" data-field="processor" style="display: none;">
+                                <label class="form-label">Processeur</label>
+                                <input type="text" class="form-control" name="processor" id="edit_processor" placeholder="ex: Intel i7-12700H, AMD Ryzen 7...">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Camera</label>
-                                <input type="text" class="form-control" name="camera" id="edit_camera">
+                            <div class="col-md-6 mb-3 spec-field" data-field="graphics_card" style="display: none;">
+                                <label class="form-label">Carte Graphique</label>
+                                <input type="text" class="form-control" name="graphics_card" id="edit_graphics_card" placeholder="ex: NVIDIA RTX 4060, Intégrée...">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3 spec-field" data-field="camera" style="display: none;">
+                                <label class="form-label">Appareil Photo</label>
+                                <input type="text" class="form-control" name="camera" id="edit_camera" placeholder="ex: 50MP, Triple 50MP+12MP+8MP...">
+                            </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="battery" style="display: none;">
+                                <label class="form-label">Batterie</label>
+                                <input type="text" class="form-control" name="battery" id="edit_battery" placeholder="ex: 5000mAh, 4500mAh...">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3 spec-field" data-field="screen_size" style="display: none;">
+                                <label class="form-label">Taille Écran</label>
+                                <input type="text" class="form-control" name="screen_size" id="edit_screen_size" placeholder="ex: 6.1 pouces, 15.6 pouces...">
+                            </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="os" style="display: none;">
+                                <label class="form-label">Système d'exploitation</label>
+                                <input type="text" class="form-control" name="os" id="edit_os" placeholder="ex: Windows 11, iOS 17, Android 14...">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Battery</label>
-                                <input type="text" class="form-control" name="battery" id="edit_battery">
+                            <div class="col-md-6 mb-3 spec-field" data-field="color" style="display: none;">
+                                <label class="form-label">Couleur</label>
+                                <input type="text" class="form-control" name="color" id="edit_color" placeholder="ex: Noir, Blanc, Bleu Océan...">
                             </div>
+                            <div class="col-md-6 mb-3 spec-field" data-field="network" style="display: none;">
+                                <label class="form-label">Réseau</label>
+                                <input type="text" class="form-control" name="network" id="edit_network" placeholder="ex: 5G, 4G, WiFi seulement...">
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Discount (%)</label>
                                 <input type="number" class="form-control" name="discount" id="edit_discount" min="0" max="100">
@@ -412,7 +501,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <small class="form-text text-muted">Leave empty to keep the current image</small>
                         </div>
                         <div id="current_image" class="mb-3 text-center">
-                            <!-- Current image will be shown here -->
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -427,7 +515,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function editProduct(product) {
-            // Fill the edit form with product data
             document.getElementById('edit_product_id').value = product.id;
             document.getElementById('edit_name').value = product.name;
             document.getElementById('edit_category').value = product.category;
@@ -441,7 +528,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('edit_battery').value = product.battery;
             document.getElementById('edit_discount').value = product.discount;
 
-            // Show current image if exists
             const currentImageDiv = document.getElementById('current_image');
             if (product.image_url) {
                 currentImageDiv.innerHTML = `
@@ -452,10 +538,137 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 currentImageDiv.innerHTML = '<p>No current image</p>';
             }
             
-            // Show the modal
             const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
             modal.show();
         }
     </script>
+
+
+    <script>
+        const categoryFields = {
+            'smartphones': ['camera', 'battery', 'screen_size', 'os', 'color', 'network','storage'],
+            'tablets': ['camera', 'battery', 'screen_size', 'os', 'color', 'network', 'storage'],
+            'mobile': ['camera', 'battery', 'screen_size', 'os', 'color', 'network','storage'],
+            'tablettes': ['camera', 'battery', 'screen_size', 'os', 'color', 'network', 'storage'],
+            
+            'laptops': ['ram', 'storage', 'processor', 'graphics_card', 'screen_size', 'os', 'color'],
+            'ordinateurs': ['ram', 'storage', 'processor', 'graphics_card', 'screen_size', 'os', 'color'],
+            'pc': ['ram', 'storage', 'processor', 'graphics_card', 'os'],
+            'desktop': ['ram', 'storage', 'processor', 'graphics_card', 'os'],
+            'bureautique': ['ram', 'storage', 'processor', 'graphics_card', 'os'],
+            
+            'gaming': ['ram', 'storage', 'processor', 'graphics_card', 'os'],
+            'games': ['ram', 'storage', 'processor', 'graphics_card', 'os'],
+            'jeux': ['ram', 'storage', 'processor', 'graphics_card', 'os'],
+            
+            'accessories': ['color'],
+            'accessoires': ['color'],
+            'casques': ['color'],
+            'ecouteurs': ['color', 'battery'],
+            
+            'monitors': ['screen_size', 'color'],
+            'ecrans': ['screen_size', 'color'],
+            'tv': ['screen_size', 'color', 'os']
+        };
+
+        function toggleFields(categoryName, modalType = 'add') {
+            const prefix = modalType === 'edit' ? '#editProductModal ' : '#addProductModal ';
+            const allSpecFields = document.querySelectorAll(prefix + '.spec-field');
+            
+            allSpecFields.forEach(field => {
+                field.style.display = 'none';
+                const input = field.querySelector('input');
+                if (input && modalType === 'add') {
+                    input.value = '';
+                }
+            });
+
+            if (!categoryName) return;
+
+            const categoryKey = categoryName.toLowerCase();
+            let fieldsToShow = [];
+            
+            for (const [key, fields] of Object.entries(categoryFields)) {
+                if (categoryKey.includes(key) || key.includes(categoryKey)) {
+                    fieldsToShow = fields;
+                    break;
+                }
+            }
+
+            fieldsToShow.forEach(fieldName => {
+                const field = document.querySelector(prefix + `.spec-field[data-field="${fieldName}"]`);
+                if (field) {
+                    field.style.display = 'block';
+                }
+            });
+
+            console.log(`Catégorie: ${categoryName} → Champs affichés: ${fieldsToShow.join(', ')}`);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const addCategorySelect = document.querySelector('#addProductModal select[name="category"]');
+            if (addCategorySelect) {
+                addCategorySelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const categoryName = selectedOption.text;
+                    toggleFields(categoryName, 'add');
+                });
+            }
+
+            const editCategorySelect = document.querySelector('#editProductModal select[name="category"]');
+            if (editCategorySelect) {
+                editCategorySelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const categoryName = selectedOption.text;
+                    toggleFields(categoryName, 'edit');
+                });
+            }
+        });
+
+        function editProduct(product) {
+            document.getElementById('edit_product_id').value = product.id;
+            document.getElementById('edit_name').value = product.name;
+            document.getElementById('edit_category').value = product.category_id;
+            document.getElementById('edit_description').value = product.description;
+            document.getElementById('edit_price').value = product.price;
+            document.getElementById('edit_stock').value = product.stock;
+            document.getElementById('edit_storage').value = product.storage || '';
+            document.getElementById('edit_ram').value = product.ram || '';
+            document.getElementById('edit_processor').value = product.processor || '';
+            document.getElementById('edit_camera').value = product.camera || '';
+            document.getElementById('edit_battery').value = product.battery || '';
+            document.getElementById('edit_discount').value = product.discount;
+
+            const editFields = ['screen_size', 'os', 'color', 'network', 'graphics_card', 'brand', 'model'];
+            editFields.forEach(field => {
+                const element = document.getElementById(`edit_${field}`);
+                if (element) {
+                    element.value = product[field] || '';
+                }
+            });
+
+            const categorySelect = document.getElementById('edit_category');
+            const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+            if (selectedOption && selectedOption.text) {
+                setTimeout(() => {
+                    toggleFields(selectedOption.text, 'edit');
+                }, 100);
+            }
+
+            const currentImageDiv = document.getElementById('current_image');
+            if (product.image_url) {
+                currentImageDiv.innerHTML = `
+                    <img src="../${product.image_url}" alt="${product.name}" style="max-height: 200px;">
+                    <p class="mt-2">Current image</p>
+                `;
+            } else {
+                currentImageDiv.innerHTML = '<p>No current image</p>';
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
+            modal.show();
+        }
+    </script>
+
 </body>
 </html>

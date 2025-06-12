@@ -27,44 +27,60 @@ try {
     exit;
 }
 
-// Function to get unique values for a field
 function getUniqueValues($conn, $field, $categorySlug = null) {
-    $query = "SELECT DISTINCT p.$field FROM products p";
-    if ($categorySlug) {
-        $query .= " LEFT JOIN categories c ON p.category_id = c.id WHERE p.$field IS NOT NULL AND c.slug = ?";
-    } else {
-        $query .= " WHERE p.$field IS NOT NULL";
+    $query = "SELECT DISTINCT p.$field as value, COUNT(*) as count 
+              FROM products p 
+              LEFT JOIN categories c ON p.category_id = c.id 
+              WHERE p.$field IS NOT NULL AND p.$field != '' AND p.$field != 'NULL'
+              AND TRIM(p.$field) != ''";
+    
+    $params = [];
+    if ($categorySlug && $categorySlug !== 'all') {
+        $query .= " AND c.slug = ?";
+        $params[] = $categorySlug;
     }
+    
+    $query .= " GROUP BY p.$field ORDER BY count DESC, p.$field ASC";
+    
     $stmt = $conn->prepare($query);
-    if ($categorySlug) {
-        $stmt->execute([$categorySlug]);
-    } else {
-        $stmt->execute();
-    }
-    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $stmt->execute($params);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    return array_map(function($row) {
+        return $row['value'] . ' (' . $row['count'] . ')';
+    }, $results);
 }
 
-// Get filter options if requested
 if (isset($_GET['get_options'])) {
     try {
+        $dynamicFilters = [
+            'laptops' => ['brand', 'model', 'ram', 'storage', 'processor', 'graphics_card', 'screen_size', 'os', 'color'],
+            'desktops' => ['brand', 'model', 'ram', 'storage', 'processor', 'graphics_card', 'os'],
+            'smartphones' => ['brand', 'model', 'storage', 'camera', 'battery', 'screen_size', 'os', 'color', 'network'],
+            'tablets' => ['brand', 'model', 'storage', 'camera', 'battery', 'screen_size', 'os', 'color', 'network'],
+            'audio' => ['brand', 'model', 'color', 'battery'],
+            'keyboards' => ['brand', 'model', 'color', 'battery'],
+            'printers' => ['brand', 'model', 'color'],
+            'components' => ['brand', 'model'],
+            'gaming' => ['brand', 'model', 'color', 'battery'],
+            'security' => ['brand', 'model']
+        ];
+        
         $filterOptions = [
             'categories' => $conn->query("SELECT slug, name FROM categories")->fetchAll(PDO::FETCH_ASSOC),
-            'laptops' => [
-                'ram' => getUniqueValues($conn, 'ram', 'laptops'),
-                'storage' => getUniqueValues($conn, 'storage', 'laptops'),
-                'processor' => getUniqueValues($conn, 'processor', 'laptops')
-            ],
-            'smartphones' => [
-                'storage' => getUniqueValues($conn, 'storage', 'smartphones'),
-                'camera' => getUniqueValues($conn, 'camera', 'smartphones'),
-                'battery' => getUniqueValues($conn, 'battery', 'smartphones')
-            ],
             'price' => [
                 'min' => $conn->query("SELECT MIN(price) FROM products")->fetchColumn(),
                 'max' => $conn->query("SELECT MAX(price) FROM products")->fetchColumn()
-            ]
+            ],
+            'dynamic_structure' => $dynamicFilters  
         ];
-
+        
+        foreach ($dynamicFilters as $categorySlug => $fields) {
+            $filterOptions[$categorySlug] = [];
+            foreach ($fields as $field) {
+                $filterOptions[$categorySlug][$field] = getUniqueValues($conn, $field, $categorySlug);
+            }
+        }
         echo json_encode([
             'success' => true,
             'options' => $filterOptions
@@ -77,26 +93,25 @@ if (isset($_GET['get_options'])) {
         ]);
         exit;
     }
-}    // Build the query for filtered products
+}
 try {
-    // Log the incoming request parameters for debugging
     error_log('Search parameters: ' . json_encode($_GET));
+    error_log('Cleaned parameters will be logged below...');
     
     $query = "SELECT p.*, c.name as category_name, c.slug as category_slug,
               p.created_at, p.image_url, p.description, p.stock,
-              p.ram, p.storage, p.processor, p.camera, p.battery
+              p.ram, p.storage, p.processor, p.camera, p.battery,
+              p.brand, p.model, p.graphics_card, p.screen_size, p.os, p.color, p.network
               FROM products p 
               LEFT JOIN categories c ON p.category_id = c.id 
               WHERE 1=1";
     $params = [];
 
-    // Category filter
     if (isset($_GET['category']) && $_GET['category'] !== '' && $_GET['category'] !== 'all') {
         $query .= " AND c.slug = ?";
         $params[] = $_GET['category'];
     }
 
-    // Price filter
     if (isset($_GET['priceMin']) && is_numeric($_GET['priceMin'])) {
         $query .= " AND p.price >= ?";
         $params[] = $_GET['priceMin'];
@@ -106,29 +121,75 @@ try {
         $params[] = $_GET['priceMax'];
     }
 
-    // Specification filters for laptops/desktops
-    if (isset($_GET['ram'])) {
+    if (isset($_GET['ram']) && $_GET['ram'] !== '') {
+        $ramValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['ram']);
         $query .= " AND p.ram = ?";
-        $params[] = $_GET['ram'];
+        $params[] = $ramValue;
     }
-    if (isset($_GET['storage'])) {
+    if (isset($_GET['storage']) && $_GET['storage'] !== '') {
+        $storageValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['storage']);
         $query .= " AND p.storage = ?";
-        $params[] = $_GET['storage'];
+        $params[] = $storageValue;
     }
-    if (isset($_GET['processor'])) {
+    if (isset($_GET['processor']) && $_GET['processor'] !== '') {
+        $processorValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['processor']);
         $query .= " AND p.processor = ?";
-        $params[] = $_GET['processor'];
+        $params[] = $processorValue;
     }
 
-    // Specification filters for smartphones/tablets
-    if (isset($_GET['camera'])) {
+    if (isset($_GET['camera']) && $_GET['camera'] !== '') {
+        $cameraValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['camera']);
         $query .= " AND p.camera = ?";
-        $params[] = $_GET['camera'];
+        $params[] = $cameraValue;
     }
-    if (isset($_GET['battery'])) {
+    if (isset($_GET['battery']) && $_GET['battery'] !== '') {
+        $batteryValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['battery']);
         $query .= " AND p.battery = ?";
-        $params[] = $_GET['battery'];
-    }    // Search filter
+        $params[] = $batteryValue;
+    }
+
+    if (isset($_GET['brand']) && $_GET['brand'] !== '') {
+        $brandValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['brand']);
+        $query .= " AND p.brand = ?";
+        $params[] = $brandValue;
+    }
+    
+    if (isset($_GET['model']) && $_GET['model'] !== '') {
+        $modelValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['model']);
+        $query .= " AND p.model = ?";
+        $params[] = $modelValue;
+    }
+    
+    if (isset($_GET['graphics_card']) && $_GET['graphics_card'] !== '') {
+        $graphicsValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['graphics_card']);
+        $query .= " AND p.graphics_card = ?";
+        $params[] = $graphicsValue;
+    }
+    
+    if (isset($_GET['screen_size']) && $_GET['screen_size'] !== '') {
+        $screenValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['screen_size']);
+        $query .= " AND p.screen_size = ?";
+        $params[] = $screenValue;
+    }
+    
+    if (isset($_GET['os']) && $_GET['os'] !== '') {
+        $osValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['os']);
+        $query .= " AND p.os = ?";
+        $params[] = $osValue;
+    }
+    
+    if (isset($_GET['color']) && $_GET['color'] !== '') {
+        $colorValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['color']);
+        $query .= " AND p.color = ?";
+        $params[] = $colorValue;
+    }
+    
+    if (isset($_GET['network']) && $_GET['network'] !== '') {
+        $networkValue = preg_replace('/\s*\(\d+\)\s*$/', '', $_GET['network']);
+        $query .= " AND p.network = ?";
+        $params[] = $networkValue;
+    }
+
     if (isset($_GET['search']) && trim($_GET['search']) !== '') {
         $searchTerm = '%' . trim($_GET['search']) . '%';
         $query .= " AND (p.name LIKE ? OR p.description LIKE ? OR c.name LIKE ?)";
@@ -137,15 +198,12 @@ try {
         $params[] = $searchTerm;
     }
 
-    // Order by and limit
     $query .= " ORDER BY p.created_at DESC";
     
-    // Add limit for quick search after ORDER BY
     if (isset($_GET['quickSearch']) && $_GET['quickSearch'] === '1') {
         $query .= " LIMIT 5";
     }
 
-    // Log the final query and parameters for debugging
     error_log('Final query: ' . $query);
     error_log('Parameters: ' . json_encode($params));
 
@@ -153,7 +211,6 @@ try {
     $stmt->execute($params);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Process products to ensure all required fields are present
     $processedProducts = array_map(function($product) {
         return array_merge([
             'id' => null,
